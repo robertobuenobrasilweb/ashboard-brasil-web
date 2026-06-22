@@ -77,7 +77,27 @@ function pick(row,names){ const keys=Object.keys(row); for(const n of names){ co
 function classify(r){ const res=norm(r.resultado), mot=norm(r.motivo); if(res.includes('DUPLIC')) return 'DUPLICADO'; if(res.includes('REPROV')) return 'REPROVADO'; if(res.includes('INVALID')||res.includes('INVÁLID')) return 'INVÁLIDO'; if(res==='OK'||res.includes('APROV')) return 'APROVADO'; if(mot) return 'INVÁLIDO'; return r.resultado || 'SEM RESULTADO'; }
 function normalizeRows(data){ return data.filter(r=>Object.values(r).some(v=>(v||'').toString().trim())).map(r=>{ const obj={ ficha:pick(r,['FICHA','Nº FICHA','NUMERO FICHA']), dataTxt:pick(r,['DT DE INCLUSÃO','DATA','DATA INCLUSÃO','DT INCLUSAO']), unidade:pick(r,['UNIDADE']), tipo:pick(r,['LAST OU TRANSF.','LAST OU TRANSF','TIPO','OPERAÇÃO','OPERACAO']), motorista:pick(r,['MOTORISTA']), cpf:pick(r,['CPF DO MOTORISTA','CPF']), placa:pick(r,['PLACAS','PLACA']), resultado:pick(r,['RESULTADO','OBS']), motivo:pick(r,['MOTIVO INVALIDO','MOTIVO INVÁLIDO','MOTIVO']) }; obj.data=parseDate(obj.dataTxt); obj.classe=classify(obj); return obj; }); }
 function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
-function populateFilters(){ [['fUnidade','unidade'],['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{ const sel=$(id); sel.innerHTML='<option value="">Todos</option>'; uniq(raw.map(r=>r[key])).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);});}); const dates=raw.map(r=>r.data).filter(Boolean).sort((a,b)=>a-b); if(dates.length){ $('dataIni').value=dates[0].toISOString().slice(0,10); $('dataFim').value=dates[dates.length-1].toISOString().slice(0,10); const mes=dates[0].toLocaleDateString('pt-BR',{month:'long',year:'numeric'}); $('mesAnalise').textContent='Mês de análise: '+mes.toUpperCase(); } }
+function populateFilters(){
+  [['fUnidade','unidade'],['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{
+    const sel=$(id);
+    sel.innerHTML='<option value="">Todos</option>';
+    uniq(raw.map(r=>r[key])).forEach(v=>{
+      const o=document.createElement('option');
+      o.value=v;
+      o.textContent=v;
+      sel.appendChild(o);
+    });
+  });
+
+  const hoje = new Date();
+  const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+  $('dataIni').value = primeiroDia.toISOString().slice(0,10);
+  $('dataFim').value = hoje.toISOString().slice(0,10);
+
+  const mes = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  $('mesAnalise').textContent='Mês de análise: '+mes.toUpperCase();
+}
 function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const u=$('fUnidade').value, res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(u&&r.unidade!==u)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
 function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
 function destroy(id){ if(charts[id]) charts[id].destroy(); }
