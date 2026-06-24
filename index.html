@@ -34,8 +34,10 @@
   <section class="filters">
     <div class="filter"><label>Data início</label><input id="dataIni" type="date"></div>
     <div class="filter"><label>Data fim</label><input id="dataFim" type="date"></div>
-    <div class="filter"><label>Unidade</label><select id="fUnidade"><option value="">Todas</option></select></div>
-    <div class="filter"><label>Resultado</label><select id="fResultado"><option value="">Todos</option></select></div>
+<div class="filter">
+  <label>Unidade</label>
+  <div id="multiUnidade" style="max-height:120px;overflow:auto;font-size:13px;"></div>
+</div>    <div class="filter"><label>Resultado</label><select id="fResultado"><option value="">Todos</option></select></div>
     <div class="filter"><label>Tipo Operação</label><select id="fTipo"><option value="">Todos</option></select></div>
     <div class="filter"><label>Pesquisar</label><input id="fBusca" placeholder="Ficha, motorista, CPF ou placa"></div>
   </section>
@@ -83,8 +85,7 @@ function classify(r){ const res=norm(r.resultado), mot=norm(r.motivo); if(res.in
 function normalizeRows(data){ return data.filter(r=>Object.values(r).some(v=>(v||'').toString().trim())).map(r=>{ const obj={ ficha:pick(r,['FICHA','Nº FICHA','NUMERO FICHA']), dataTxt:pick(r,['DT DE INCLUSÃO','DATA','DATA INCLUSÃO','DT INCLUSAO']), unidade:pick(r,['UNIDADE']), tipo:pick(r,['LAST OU TRANSF.','LAST OU TRANSF','TIPO','OPERAÇÃO','OPERACAO']), motorista:pick(r,['MOTORISTA']), cpf:pick(r,['CPF DO MOTORISTA','CPF']), placa:pick(r,['PLACAS','PLACA']), resultado:pick(r,['RESULTADO','OBS']), motivo:pick(r,['MOTIVO INVALIDO','MOTIVO INVÁLIDO','MOTIVO']) }; obj.data=parseDate(obj.dataTxt); obj.classe=classify(obj); return obj; }); }
 function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
 function populateFilters(){
-  [['fUnidade','unidade'],['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{
-    const sel=$(id);
+[['fResultado','classe'],['fTipo','tipo']]    const sel=$(id);
     sel.innerHTML='<option value="">Todos</option>';
     uniq(raw.map(r=>r[key])).forEach(v=>{
       const o=document.createElement('option');
@@ -94,6 +95,27 @@ function populateFilters(){
     });
   });
 
+  });
+});
+
+const divUnidade = $('multiUnidade');
+divUnidade.innerHTML = '';
+
+uniq(raw.map(r=>r.unidade)).forEach(v=>{
+  const label = document.createElement('label');
+  label.style.display = 'block';
+  label.style.marginBottom = '4px';
+
+  label.innerHTML = `<input type="checkbox" class="chkUnidade" value="${v}" checked> ${v}`;
+  divUnidade.appendChild(label);
+});
+
+document.querySelectorAll('.chkUnidade').forEach(chk=>{
+  chk.addEventListener('change', applyFilters);
+});
+
+const hoje = new Date();
+const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
   const hoje = new Date();
   const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
@@ -103,8 +125,8 @@ function populateFilters(){
   const mes = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
   $('mesAnalise').textContent='Mês de análise: '+mes.toUpperCase();
 }
-function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const u=$('fUnidade').value, res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(u&&r.unidade!==u)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
-function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
+const unidadesSelecionadas = [...document.querySelectorAll('.chkUnidade:checked')].map(c=>c.value);
+if(unidadesSelecionadas.length && !unidadesSelecionadas.includes(r.unidade)) return false;function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
 function destroy(id){ if(charts[id]) charts[id].destroy(); }
 function chart(id,type,labels,data,opts={}){ destroy(id); charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label:'Quantidade',data,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type!=='bar'&&type!=='line'}},...opts}}); }
 function renderKPIs(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; $('kTotal').textContent=total; $('kAprov').textContent=ap; $('kRep').textContent=rp; $('kInv').textContent=inv; $('kDup').textContent=dup; $('kTaxa').textContent= total? ((ap/total)*100).toFixed(1).replace('.',',')+'%' : '0%'; }
@@ -113,7 +135,7 @@ function badge(c){ const cls=c==='APROVADO'?'ok':c==='REPROVADO'?'rep':c==='INV�
 function renderRank(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); const rows=Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>`<tr><td>${u}</td><td>${v.t}</td><td>${v.a}</td><td>${v.t?((v.a/v.t)*100).toFixed(1).replace('.',','):0}%</td><td>${v.r}</td><td>${v.i}</td><td>${v.d}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</td><td>${r.ficha||''}</td><td>${fmtDate(r.data)}</td><td>${r.tipo||''}</td><td>${r.motorista||''}</td><td>${r.cpf||''}</td><td>${r.placa||''}</td><td>${badge(r.classe)}</td><td>${r.motivo||''}</td></tr>`).join(''); $('detailTable').innerHTML='<thead><tr><th>Unidade</th><th>Ficha</th><th>Data</th><th>Tipo</th><th>Motorista</th><th>CPF</th><th>Placa</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail(); }
-['dataIni','dataFim','fUnidade','fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
+['dataIni','dataFim','fResultado','fTipo','fBusca']
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('exec').classList.toggle('hidden',b.dataset.tab!=='exec'); $('det').classList.toggle('hidden',b.dataset.tab!=='det'); });
 function exportarExcel(){
   const cabecalho = [
