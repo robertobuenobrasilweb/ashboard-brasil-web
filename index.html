@@ -34,10 +34,7 @@
   <section class="filters">
     <div class="filter"><label>Data início</label><input id="dataIni" type="date"></div>
     <div class="filter"><label>Data fim</label><input id="dataFim" type="date"></div>
-<div class="filter">
-  <label>Unidade</label>
-  <div id="multiUnidade" style="max-height:120px;overflow:auto;font-size:13px;"></div>
-</div>    <div class="filter"><label>Resultado</label><select id="fResultado"><option value="">Todos</option></select></div>
+<div class="filter"><label>Unidade</label><select id="fUnidade"><option value="">Todas</option></select></div>
     <div class="filter"><label>Tipo Operação</label><select id="fTipo"><option value="">Todos</option></select></div>
     <div class="filter"><label>Pesquisar</label><input id="fBusca" placeholder="Ficha, motorista, CPF ou placa"></div>
   </section>
@@ -85,7 +82,7 @@ function classify(r){ const res=norm(r.resultado), mot=norm(r.motivo); if(res.in
 function normalizeRows(data){ return data.filter(r=>Object.values(r).some(v=>(v||'').toString().trim())).map(r=>{ const obj={ ficha:pick(r,['FICHA','Nº FICHA','NUMERO FICHA']), dataTxt:pick(r,['DT DE INCLUSÃO','DATA','DATA INCLUSÃO','DT INCLUSAO']), unidade:pick(r,['UNIDADE']), tipo:pick(r,['LAST OU TRANSF.','LAST OU TRANSF','TIPO','OPERAÇÃO','OPERACAO']), motorista:pick(r,['MOTORISTA']), cpf:pick(r,['CPF DO MOTORISTA','CPF']), placa:pick(r,['PLACAS','PLACA']), resultado:pick(r,['RESULTADO','OBS']), motivo:pick(r,['MOTIVO INVALIDO','MOTIVO INVÁLIDO','MOTIVO']) }; obj.data=parseDate(obj.dataTxt); obj.classe=classify(obj); return obj; }); }
 function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
 function populateFilters(){
-[['fResultado','classe'],['fTipo','tipo']]    const sel=$(id);
+[['fUnidade','unidade'],['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{
     sel.innerHTML='<option value="">Todos</option>';
     uniq(raw.map(r=>r[key])).forEach(v=>{
       const o=document.createElement('option');
@@ -98,25 +95,11 @@ function populateFilters(){
   });
 });
 
-const divUnidade = $('multiUnidade');
-divUnidade.innerHTML = '';
 
-uniq(raw.map(r=>r.unidade)).forEach(v=>{
-  const label = document.createElement('label');
-  label.style.display = 'block';
-  label.style.marginBottom = '4px';
-
-  label.innerHTML = `<input type="checkbox" class="chkUnidade" value="${v}" checked> ${v}`;
-  divUnidade.appendChild(label);
-});
-
-document.querySelectorAll('.chkUnidade').forEach(chk=>{
-  chk.addEventListener('change', applyFilters);
-});
 
 const hoje = new Date();
 const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-  const hoje = new Date();
+  
   const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
 
   $('dataIni').value = primeiroDia.toISOString().slice(0,10);
