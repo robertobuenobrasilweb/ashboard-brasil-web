@@ -149,7 +149,33 @@ function exportarExcel(){
 }
 
 $("btnExcel").addEventListener("click", exportarExcel);  
-Papa.parse(CSV_URL+'&t='+Date.now(),{download:true,header:true,skipEmptyLines:true,complete:function(res){ raw=normalizeRows(res.data); populateFilters(); filtered=raw; applyFilters(); $('status').textContent=`Dados carregados com sucesso: ${raw.length} fichas encontradas.`; $('lastUpdate').textContent='Última atualização: '+new Date().toLocaleString('pt-BR');},error:function(err){ $('status').classList.add('error'); $('status').innerHTML='Não consegui carregar a planilha automaticamente. Verifique se ela está publicada na web em CSV e se o navegador permite acesso à internet.<br><br>Erro: '+err; }});
-</script>
+function carregarDados(){
+  Papa.parse(CSV_URL+'&t='+Date.now(),{
+    download:true,
+    header:true,
+    skipEmptyLines:true,
+    complete:function(res){
+      raw = normalizeRows(res.data);
+      populateFilters();
+      filtered = raw;
+      applyFilters();
+
+      $('status').textContent =
+        `Dados carregados com sucesso: ${raw.length} fichas encontradas.`;
+
+      $('lastUpdate').textContent =
+        'Última atualização: ' +
+        new Date().toLocaleString('pt-BR');
+    },
+    error:function(err){
+      $('status').classList.add('error');
+      $('status').textContent =
+        'Erro ao carregar a planilha.';
+    }
+  });
+}
+
+carregarDados();
+setInterval(carregarDados, 300000);</script>
 </body>
 </html>
