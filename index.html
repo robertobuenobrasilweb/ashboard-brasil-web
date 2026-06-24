@@ -39,7 +39,12 @@
     <div class="filter"><label>Tipo Operação</label><select id="fTipo"><option value="">Todos</option></select></div>
     <div class="filter"><label>Pesquisar</label><input id="fBusca" placeholder="Ficha, motorista, CPF ou placa"></div>
   </section>
-
+<div style="margin:15px 0;">
+  <button id="btnExcel"
+    style="background:#16a34a;color:white;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;cursor:pointer;">
+    📊 Exportar Excel
+  </button>
+</div>
   <main id="exec">
     <section class="kpis">
       <div class="kpi"><div class="label">Total Fichas Triadas</div><div id="kTotal" class="value">0</div><div class="hint">Registros filtrados</div></div>
@@ -110,6 +115,40 @@ function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</t
 function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail(); }
 ['dataIni','dataFim','fUnidade','fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('exec').classList.toggle('hidden',b.dataset.tab!=='exec'); $('det').classList.toggle('hidden',b.dataset.tab!=='det'); });
+function exportarExcel(){
+  const cabecalho = [
+    "Unidade","Ficha","Data","Tipo","Motorista","CPF","Placa","Resultado","Motivo"
+  ];
+
+  const linhas = filtered.map(r => [
+    r.unidade || "",
+    r.ficha || "",
+    fmtDate(r.data),
+    r.tipo || "",
+    r.motorista || "",
+    r.cpf || "",
+    r.placa || "",
+    r.classe || "",
+    r.motivo || ""
+  ]);
+
+  const csv = [cabecalho, ...linhas]
+    .map(linha => linha.map(campo => `"${String(campo).replace(/"/g,'""')}"`).join(";"))
+    .join("\n");
+
+  const blob = new Blob(["\uFEFF" + csv], {type: "text/csv;charset=utf-8;"});
+  const link = document.createElement("a");
+
+  const unidade = $("fUnidade").value || "Todas_Unidades";
+  const dataIni = $("dataIni").value || "inicio";
+  const dataFim = $("dataFim").value || "fim";
+
+  link.href = URL.createObjectURL(blob);
+  link.download = `relatorio_brasil_web_${unidade}_${dataIni}_a_${dataFim}.csv`;
+  link.click();
+}
+
+$("btnExcel").addEventListener("click", exportarExcel);  
 Papa.parse(CSV_URL+'&t='+Date.now(),{download:true,header:true,skipEmptyLines:true,complete:function(res){ raw=normalizeRows(res.data); populateFilters(); filtered=raw; applyFilters(); $('status').textContent=`Dados carregados com sucesso: ${raw.length} fichas encontradas.`; $('lastUpdate').textContent='Última atualização: '+new Date().toLocaleString('pt-BR');},error:function(err){ $('status').classList.add('error'); $('status').innerHTML='Não consegui carregar a planilha automaticamente. Verifique se ela está publicada na web em CSV e se o navegador permite acesso à internet.<br><br>Erro: '+err; }});
 </script>
 </body>
