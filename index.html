@@ -140,7 +140,15 @@ function chart(id,type,labels,data,opts={}){
   });
 }
 
-function renderKPIs(){
+function renderKPIs(){ 
+  const total=filtered.length, aprov=filtered.filter(r=>r.classe==='APROVADO').length, rep=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length;
+  $('kTotal').textContent=total;
+  $('kAprov').textContent=aprov;
+  $('kTaxa').textContent=total?((aprov/total)*100).toFixed(1).replace('.',',')+'%':'0%';
+  $('kRep').textContent=rep;
+  $('kInv').textContent=inv;
+  $('kDup').textContent=dup;
+}
 function renderRank(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); const rows=Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>`<tr><td>${u}</td><td>${v.t}</td><td>${v.a}</td><td>${v.t?((v.a/v.t)*100).toFixed(1).replace('.',','):0}%</td><td>${v.r}</td><td>${v.i}</td><td>${v.d}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</td><td>${r.ficha||''}</td><td>${fmtDate(r.data)}</td><td>${r.tipo||''}</td><td>${r.motorista||''}</td><td>${r.cpf||''}</td><td>${r.placa||''}</td><td>${badge(r.classe)}</td><td>${r.motivo||''}</td></tr>`).join(''); $('detailTable').innerHTML='<thead><tr><th>Unidade</th><th>Ficha</th><th>Data</th><th>Tipo</th><th>Motorista</th><th>CPF</th><th>Placa</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail(); }
