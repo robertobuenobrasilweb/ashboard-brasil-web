@@ -7,7 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
   <style>
-    :root{--blue:#0b2f6b;--blue2:#174ea6;--light:#f4f7fb;--text:#1f2937;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--orange:#f59e0b;--purple:#7c3aed;--border:#e5e7eb;}
+    :root{--blue:#0b2f6b;--blue2:#174ea6;--light:#f4f7fb;--text:#1f2937;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--orange:#f59e0b;--purple:#7c3aed;--yellow:#facc15;--border:#e5e7eb;}
     *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:white;color:var(--text)}
     .wrap{max-width:1480px;margin:0 auto;padding:22px}
     header{background:white;border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.06);display:flex;justify-content:space-between;gap:18px;align-items:center}
@@ -51,8 +51,8 @@
       <div class="kpi"><div class="label">Aprovadas</div><div id="kAprov" class="value" style="color:var(--green)">0</div><div class="hint">OK / Aprovado</div></div>
       <div class="kpi"><div class="label">Taxa de Aprovação</div><div id="kTaxa" class="value" style="color:var(--blue2)">0%</div><div class="hint">Aprovadas ÷ Total</div></div>
       <div class="kpi"><div class="label">Reprovadas</div><div id="kRep" class="value" style="color:var(--red)">0</div><div class="hint">Ocorrências negativas</div></div>
-      <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--orange)">0</div><div class="hint">Pesquisa inválida</div></div>
-      <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--purple)">0</div><div class="hint">Ficha duplicada</div></div>
+      <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--yellow)">0</div><div class="hint">Pesquisa inválida</div></div>
+      <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--orange)">0</div><div class="hint">Ficha duplicada</div></div>
     </section>
     <section class="grid">
       <div class="card"><h3>Evolução diária das fichas</h3><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div>
@@ -106,189 +106,47 @@ function populateFilters(){
 function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const u=$('fUnidade').value, res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(u&&r.unidade!==u)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
 function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
 function destroy(id){ if(charts[id]) charts[id].destroy(); }
-function chart(id,type,labels,data,opts={}){ destroy(id); charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label:'Quantidade',data,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type!=='bar'&&type!=='line'}},...opts}}); }
-function renderKPIs(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; $('kTotal').textContent=total; $('kAprov').textContent=ap; $('kRep').textContent=rp; $('kInv').textContent=inv; $('kDup').textContent=dup; $('kTaxa').textContent= total? ((ap/total)*100).toFixed(1).replace('.',',')+'%' : '0%'; }
-function renderCharts(){ const byDay=countBy(filtered,r=>r.data?fmtDate(r.data):'Sem data'); const dayLabels=Object.keys(byDay).sort((a,b)=>parseDate(a)-parseDate(b)); chart('cEvolucao','line',dayLabels,dayLabels.map(k=>byDay[k]),{scales:{y:{beginAtZero:true}}}); const res=countBy(filtered,'classe'); chart('cResultado','doughnut',Object.keys(res),Object.values(res)); const un=countBy(filtered,'unidade'); const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]); chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); const tp=countBy(filtered,'tipo'); chart('cTipo','pie',Object.keys(tp),Object.values(tp)); const mot=countBy(filtered.filter(r=>r.motivo),'motivo'); const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]); chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); }
-function badge(c){ const cls=c==='APROVADO'?'ok':c==='REPROVADO'?'rep':c==='INVÁLIDO'?'inv':c==='DUPLICADO'?'dup':'other'; return `<span class="badge ${cls}">${c}</span>`; }
-function renderRank(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); const rows=Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>`<tr><td>${u}</td><td>${v.t}</td><td>${v.a}</td><td>${v.t?((v.a/v.t)*100).toFixed(1).replace('.',','):0}%</td><td>${v.r}</td><td>${v.i}</td><td>${v.d}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
-function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</td><td>${r.ficha||''}</td><td>${fmtDate(r.data)}</td><td>${r.tipo||''}</td><td>${r.motorista||''}</td><td>${r.cpf||''}</td><td>${r.placa||''}</td><td>${badge(r.classe)}</td><td>${r.motivo||''}</td></tr>`).join(''); $('detailTable').innerHTML='<thead><tr><th>Unidade</th><th>Ficha</th><th>Data</th><th>Tipo</th><th>Motorista</th><th>CPF</th><th>Placa</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody>'; }
-function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail(); }
-['dataIni','dataFim','fUnidade','fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
-document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('exec').classList.toggle('hidden',b.dataset.tab!=='exec'); $('det').classList.toggle('hidden',b.dataset.tab!=='det'); });
-function exportarExcel(){
-  const cabecalho = [
-    "Unidade","Ficha","Data","Tipo","Motorista","CPF","Placa","Resultado","Motivo"
-  ];
-
-  const linhas = filtered.map(r => [
-    r.unidade || "",
-    r.ficha || "",
-    fmtDate(r.data),
-    r.tipo || "",
-    r.motorista || "",
-    r.cpf || "",
-    r.placa || "",
-    r.classe || "",
-    r.motivo || ""
-  ]);
-
-  const csv = [cabecalho, ...linhas]
-    .map(linha => linha.map(campo => `"${String(campo).replace(/"/g,'""')}"`).join(";"))
-    .join("\n");
-
-  const blob = new Blob(["\uFEFF" + csv], {type: "text/csv;charset=utf-8;"});
-  const link = document.createElement("a");
-
-  const unidade = $("fUnidade").value || "Todas_Unidades";
-  const dataIni = $("dataIni").value || "inicio";
-  const dataFim = $("dataFim").value || "fim";
-
-  link.href = URL.createObjectURL(blob);
-  link.download = `relatorio_brasil_web_${unidade}_${dataIni}_a_${dataFim}.csv`;
-  link.click();
+function corResultado(label){
+  const x=norm(label);
+  if(x.includes('REPROV')) return '#dc2626';
+  if(x.includes('APROV')) return '#16a34a';
+  if(x.includes('INVALID')||x.includes('INVAL')) return '#facc15';
+  if(x.includes('DUPLIC')) return '#f59e0b';
+  if(x.includes('LAST')) return '#0ea5e9';
+  if(x.includes('TRANSF')) return '#7c3aed';
+  return '#0b2f6b';
 }
-
-$("btnExcel").addEventListener("click", exportarExcel);  
-function carregarDados(){
-  Papa.parse(CSV_URL+'&t='+Date.now(),{
-    download:true,
-    header:true,
-    skipEmptyLines:true,
-    complete:function(res){
-      raw = normalizeRows(res.data);
-      populateFilters();
-      filtered = raw;
-      applyFilters();
-
-      $('status').textContent =
-        `Dados carregados com sucesso: ${raw.length} fichas encontradas.`;
-
-      $('lastUpdate').textContent =
-        'Última atualização: ' +
-        new Date().toLocaleString('pt-BR');
+function chart(id,type,labels,data,opts={}){
+  destroy(id);
+  const cores=labels.map(corResultado);
+  const corLinha='#0ea5e9';
+  charts[id]=new Chart($(id),{
+    type,
+    data:{
+      labels,
+      datasets:[{
+        label:'Quantidade',
+        data,
+        borderWidth:2,
+        backgroundColor:type==='line' ? corLinha : cores,
+        borderColor:type==='line' ? corLinha : cores,
+        tension:.25,
+        fill:false
+      }]
     },
-    error:function(err){
-      $('status').classList.add('error');
-      $('status').textContent =
-        'Erro ao carregar a planilha.';
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:type!=='bar'&&type!=='line'}},
+      ...opts
     }
   });
 }
-
-carregarDados();
-setInterval(carregarDados, 300000);</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard Brasil Web</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <style>
-    :root{--blue:#0b2f6b;--blue2:#174ea6;--light:#f4f7fb;--text:#1f2937;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--orange:#f59e0b;--purple:#7c3aed;--border:#e5e7eb;}
-    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:white;color:var(--text)}
-    .wrap{max-width:1480px;margin:0 auto;padding:22px}
-    header{background:white;border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:0 8px 24px rgba(15,23,42,.06);display:flex;justify-content:space-between;gap:18px;align-items:center}
-    .brand h1{margin:0;color:var(--blue);font-size:34px;letter-spacing:.5px}.brand p{margin:4px 0 0;color:var(--blue2);font-weight:700;font-size:18px}.month{color:var(--muted);font-weight:600;text-align:right}.tabs{display:flex;gap:10px;margin:18px 0}.tab{border:1px solid var(--border);background:white;color:var(--blue);padding:11px 18px;border-radius:999px;font-weight:700;cursor:pointer}.tab.active{background:var(--blue);color:white}
-    .filters{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.filter{background:white;border:1px solid var(--border);border-radius:14px;padding:10px;box-shadow:0 4px 16px rgba(15,23,42,.04)}.filter label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin-bottom:6px}.filter select,.filter input{width:100%;border:0;outline:0;font-size:14px;background:white;color:var(--text)}
-    .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:16px 0}.kpi{background:white;border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.06)}.kpi .label{color:var(--muted);font-size:13px;font-weight:700}.kpi .value{font-size:30px;font-weight:800;margin-top:6px}.kpi .hint{font-size:12px;color:var(--muted);margin-top:4px}
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}.card{background:white;border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:0 8px 24px rgba(15,23,42,.06)}.card h3{margin:0 0 12px;color:var(--blue);font-size:17px}.chartBox{height:315px}.chartBoxSmall{height:285px}.hidden{display:none!important}
-    table{width:100%;border-collapse:collapse;font-size:13px}th{background:var(--blue);color:white;text-align:left;padding:10px;position:sticky;top:0}td{border-bottom:1px solid var(--border);padding:9px}tr:hover{background:#f8fafc}.tableWrap{max-height:650px;overflow:auto;border:1px solid var(--border);border-radius:14px}.badge{padding:5px 9px;border-radius:999px;font-weight:800;font-size:11px;display:inline-block}.ok{background:#dcfce7;color:#166534}.rep{background:#fee2e2;color:#991b1b}.inv{background:#ffedd5;color:#9a3412}.dup{background:#ede9fe;color:#5b21b6}.other{background:#e5e7eb;color:#374151}.status{padding:12px;border-radius:14px;background:#eff6ff;color:#1d4ed8;margin:16px 0;border:1px solid #bfdbfe}.error{background:#fef2f2;color:#991b1b;border-color:#fecaca}.footer{color:var(--muted);font-size:12px;margin-top:16px;text-align:right}
-    @media(max-width:1050px){.filters,.kpis,.grid3{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}@media(max-width:650px){.filters,.kpis,.grid3{grid-template-columns:1fr}header{display:block}.month{text-align:left;margin-top:10px}.brand h1{font-size:26px}}
-  </style>
-</head>
-<body>
-<div class="wrap">
-  <header>
-    <div class="brand"><h1>BRASIL WEB</h1><p>A BRASIL NÃO PARA</p></div>
-<div class="month">
-  <div id="mesAnalise" style="display:none"></div>
-  <div id="lastUpdate">Atualizando dados...</div>
-</div>
-  </header>
-  <div id="status" class="status">Carregando dados da planilha Google Sheets...</div>
-  <div class="tabs"><button class="tab active" data-tab="exec">Executivo</button><button class="tab" data-tab="det">Detalhamento Operacional</button></div>
-
-  <section class="filters">
-    <div class="filter"><label>Data início</label><input id="dataIni" type="date"></div>
-    <div class="filter"><label>Data fim</label><input id="dataFim" type="date"></div>
-    <div class="filter"><label>Unidade</label><select id="fUnidade"><option value="">Todas</option></select></div>
-    <div class="filter"><label>Resultado</label><select id="fResultado"><option value="">Todos</option></select></div>
-    <div class="filter"><label>Tipo Operação</label><select id="fTipo"><option value="">Todos</option></select></div>
-    <div class="filter"><label>Pesquisar</label><input id="fBusca" placeholder="Ficha, motorista, CPF ou placa"></div>
-  </section>
-<div style="margin:15px 0;">
-  <button id="btnExcel"
-    style="background:#16a34a;color:white;border:none;padding:12px 20px;border-radius:10px;font-weight:bold;cursor:pointer;">
-    📊 Exportar Excel
-  </button>
-</div>
-  <main id="exec">
-    <section class="kpis">
-      <div class="kpi"><div class="label">Total Fichas Triadas</div><div id="kTotal" class="value">0</div><div class="hint">Registros filtrados</div></div>
-      <div class="kpi"><div class="label">Aprovadas</div><div id="kAprov" class="value" style="color:var(--green)">0</div><div class="hint">OK / Aprovado</div></div>
-      <div class="kpi"><div class="label">Taxa de Aprovação</div><div id="kTaxa" class="value" style="color:var(--blue2)">0%</div><div class="hint">Aprovadas ÷ Total</div></div>
-      <div class="kpi"><div class="label">Reprovadas</div><div id="kRep" class="value" style="color:var(--red)">0</div><div class="hint">Ocorrências negativas</div></div>
-      <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--orange)">0</div><div class="hint">Pesquisa inválida</div></div>
-      <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--purple)">0</div><div class="hint">Ficha duplicada</div></div>
-    </section>
-    <section class="grid">
-      <div class="card"><h3>Evolução diária das fichas</h3><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div>
-      <div class="card"><h3>Resultado geral</h3><div class="chartBox"><canvas id="cResultado"></canvas></div></div>
-    </section>
-    <section class="grid3">
-      <div class="card"><h3>Resultado por unidade</h3><div class="chartBoxSmall"><canvas id="cUnidade"></canvas></div></div>
-      <div class="card"><h3>Last Mile x Transferência</h3><div class="chartBoxSmall"><canvas id="cTipo"></canvas></div></div>
-      <div class="card"><h3>Top motivos de invalidação</h3><div class="chartBoxSmall"><canvas id="cMotivo"></canvas></div></div>
-    </section>
-    <section class="card" style="margin-top:16px"><h3>Ranking das unidades</h3><div class="tableWrap" style="max-height:330px"><table id="rankTable"></table></div></section>
-  </main>
-
-  <main id="det" class="hidden">
-    <section class="card"><h3>Detalhamento operacional</h3><div class="tableWrap"><table id="detailTable"></table></div></section>
-  </main>
-  <div class="footer">Dashboard conectado ao Google Sheets publicado em CSV.</div>
-</div>
-<script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCZQkw-OgPURjkMYr72F0QE-P60YyoC4DrGWNejeAzdrwN1-i9L_YQ0PF5y0oJ7mkjFPF87mbrvjq4/pub?output=csv';
-let raw=[], filtered=[], charts={};
-const $=id=>document.getElementById(id);
-const norm=s=>(s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
-const fmtDate=d=> d ? d.toLocaleDateString('pt-BR') : '';
-function parseDate(v){ if(!v) return null; const s=v.toString().trim(); const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){let y=+m[3]; if(y<100)y+=2000; return new Date(y,+m[2]-1,+m[1]);} const d=new Date(s); return isNaN(d)?null:d; }
-function pick(row,names){ const keys=Object.keys(row); for(const n of names){ const hit=keys.find(k=>norm(k)===norm(n)); if(hit) return row[hit]||'';} return '';}
-function classify(r){ const res=norm(r.resultado), mot=norm(r.motivo); if(res.includes('DUPLIC')) return 'DUPLICADO'; if(res.includes('REPROV')) return 'REPROVADO'; if(res.includes('INVALID')||res.includes('INVÁLID')) return 'INVÁLIDO'; if(res==='OK'||res.includes('APROV')) return 'APROVADO'; if(mot) return 'INVÁLIDO'; return r.resultado || 'SEM RESULTADO'; }
-function normalizeRows(data){ return data.filter(r=>Object.values(r).some(v=>(v||'').toString().trim())).map(r=>{ const obj={ ficha:pick(r,['FICHA','Nº FICHA','NUMERO FICHA']), dataTxt:pick(r,['DT DE INCLUSÃO','DATA','DATA INCLUSÃO','DT INCLUSAO']), unidade:pick(r,['UNIDADE']), tipo:pick(r,['LAST OU TRANSF.','LAST OU TRANSF','TIPO','OPERAÇÃO','OPERACAO']), motorista:pick(r,['MOTORISTA']), cpf:pick(r,['CPF DO MOTORISTA','CPF']), placa:pick(r,['PLACAS','PLACA']), resultado:pick(r,['RESULTADO','OBS']), motivo:pick(r,['MOTIVO INVALIDO','MOTIVO INVÁLIDO','MOTIVO']) }; obj.data=parseDate(obj.dataTxt); obj.classe=classify(obj); return obj; }); }
-function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
-function populateFilters(){
-  [['fUnidade','unidade'],['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{
-    const sel=$(id);
-    sel.innerHTML='<option value="">Todos</option>';
-    uniq(raw.map(r=>r[key])).forEach(v=>{
-      const o=document.createElement('option');
-      o.value=v;
-      o.textContent=v;
-      sel.appendChild(o);
-    });
-  });
-
-  const hoje = new Date();
-  const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-
-  $('dataIni').value = primeiroDia.toISOString().slice(0,10);
-  $('dataFim').value = hoje.toISOString().slice(0,10);
-
-  const mes = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-  $('mesAnalise').textContent='Mês de análise: '+mes.toUpperCase();
-}
-function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const u=$('fUnidade').value, res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(u&&r.unidade!==u)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
-function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
-function destroy(id){ if(charts[id]) charts[id].destroy(); }
-function chart(id,type,labels,data,opts={}){ destroy(id); charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label:'Quantidade',data,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type!=='bar'&&type!=='line'}},...opts}}); }
 function renderKPIs(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; $('kTotal').textContent=total; $('kAprov').textContent=ap; $('kRep').textContent=rp; $('kInv').textContent=inv; $('kDup').textContent=dup; $('kTaxa').textContent= total? ((ap/total)*100).toFixed(1).replace('.',',')+'%' : '0%'; }
-function renderCharts(){ const byDay=countBy(filtered,r=>r.data?fmtDate(r.data):'Sem data'); const dayLabels=Object.keys(byDay).sort((a,b)=>parseDate(a)-parseDate(b)); chart('cEvolucao','line',dayLabels,dayLabels.map(k=>byDay[k]),{scales:{y:{beginAtZero:true}}}); const res=countBy(filtered,'classe'); chart('cResultado','doughnut',Object.keys(res),Object.values(res)); const un=countBy(filtered,'unidade'); const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]); chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); const tp=countBy(filtered,'tipo'); chart('cTipo','pie',Object.keys(tp),Object.values(tp)); const mot=countBy(filtered.filter(r=>r.motivo),'motivo'); const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]); chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); }
+function renderCharts(){ const byDay=countBy(filtered,r=>r.data?fmtDate(r.data):'Sem data'); const dayLabels=Object.keys(byDay).sort((a,b)=>parseDate(a)-parseDate(b)); chart('cEvolucao','line',dayLabels,dayLabels.map(k=>byDay[k]),{scales:{y:{beginAtZero:true}}}); const ordemResultado=['APROVADO','REPROVADO','INVÁLIDO','DUPLICADO'];
+const res=countBy(filtered,'classe');
+const resLabels=ordemResultado.filter(k=>res[k]);
+chart('cResultado','doughnut',resLabels,resLabels.map(k=>res[k])); const un=countBy(filtered,'unidade'); const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]); chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); const tp=countBy(filtered,'tipo'); chart('cTipo','pie',Object.keys(tp),Object.values(tp)); const mot=countBy(filtered.filter(r=>r.motivo),'motivo'); const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]); chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true}}}); }
 function badge(c){ const cls=c==='APROVADO'?'ok':c==='REPROVADO'?'rep':c==='INVÁLIDO'?'inv':c==='DUPLICADO'?'dup':'other'; return `<span class="badge ${cls}">${c}</span>`; }
 function renderRank(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); const rows=Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>`<tr><td>${u}</td><td>${v.t}</td><td>${v.a}</td><td>${v.t?((v.a/v.t)*100).toFixed(1).replace('.',','):0}%</td><td>${v.r}</td><td>${v.i}</td><td>${v.d}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</td><td>${r.ficha||''}</td><td>${fmtDate(r.data)}</td><td>${r.tipo||''}</td><td>${r.motorista||''}</td><td>${r.cpf||''}</td><td>${r.placa||''}</td><td>${badge(r.classe)}</td><td>${r.motivo||''}</td></tr>`).join(''); $('detailTable').innerHTML='<thead><tr><th>Unidade</th><th>Ficha</th><th>Data</th><th>Tipo</th><th>Motorista</th><th>CPF</th><th>Placa</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody>'; }
