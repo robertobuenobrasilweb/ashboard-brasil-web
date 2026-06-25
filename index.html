@@ -48,7 +48,7 @@
       <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--orange)">0</div><div class="hint">Pesquisa inválida</div></div>
       <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--purple)">0</div><div class="hint">Ficha duplicada</div></div>
     </section>
-    <section class="grid"><div class="card"><h3>Evolução diária das fichas</h3><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div><div class="card"><h3>Resultado geral</h3><div class="chartBox"><canvas id="cResultado"></canvas></div></div></section>
+    <section class="grid"><div class="card"><h3 id="tituloEvolucao">Evolução diária das fichas</h3><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div><div class="card"><h3>Resultado geral</h3><div class="chartBox"><canvas id="cResultado"></canvas></div></div></section>
     <section class="grid3"><div class="card"><h3>Resultado por unidade</h3><div class="chartBoxSmall"><canvas id="cUnidade"></canvas></div></div><div class="card"><h3>Last Mile x Transferência</h3><div class="chartBoxSmall"><canvas id="cTipo"></canvas></div></div><div class="card"><h3>Top motivos de invalidação</h3><div class="chartBoxSmall"><canvas id="cMotivo"></canvas></div></div></section>
     <section class="card" style="margin-top:16px"><h3>Ranking das unidades</h3><div class="tableWrap" style="max-height:330px"><table id="rankTable"></table></div></section>
   </main>
@@ -72,7 +72,93 @@ const centerTextPlugin={id:'centerTextPlugin',afterDraw(chart,args,pluginOptions
 Chart.register(valueLabelsPlugin,centerTextPlugin);
 function chart(id,type,labels,data,opts={}){destroy(id);charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label:'Quantidade',data,borderWidth:3,pointRadius:type==='line'?5:3,pointHoverRadius:type==='line'?7:5,tension:type==='line'?0.25:0,backgroundColor:type==='line'?'rgba(14,165,233,.12)':['#16a34a','#dc2626','#facc15','#f59e0b','#7c3aed','#0ea5e9','#3b82f6'],borderColor:type==='line'?'#0ea5e9':['#16a34a','#dc2626','#facc15','#f59e0b','#7c3aed','#0ea5e9','#3b82f6'],fill:type==='line'}]},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},tooltip:{enabled:true,backgroundColor:'#0f172a',titleColor:'#fff',bodyColor:'#fff',padding:10}},...opts}});}
 function renderKPIs(){const total=filtered.length,ap=filtered.filter(r=>r.classe==='APROVADO').length,rp=filtered.filter(r=>r.classe==='REPROVADO').length,inv=filtered.filter(r=>r.classe==='INVÁLIDO').length,dup=filtered.filter(r=>r.classe==='DUPLICADO').length;$('kTotal').textContent=total;$('kAprov').textContent=ap;$('kRep').textContent=rp;$('kInv').textContent=inv;$('kDup').textContent=dup;$('kTaxa').textContent=total?((ap/total)*100).toFixed(1).replace('.',',')+'%':'0%';}
-function renderCharts(){const byDay=countBy(filtered,r=>r.data?fmtDate(r.data):'Sem data');const dayLabels=Object.keys(byDay).sort((a,b)=>parseDate(a)-parseDate(b));chart('cEvolucao','line',dayLabels,dayLabels.map(k=>byDay[k]),{plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},tooltip:{enabled:true,callbacks:{title:(items)=>'Data: '+items[0].label,label:(item)=>'Fichas: '+item.parsed.y}},valueLabelsPlugin:{display:true}},layout:{padding:{top:22,right:18,bottom:12,left:8}},scales:{y:{beginAtZero:true,ticks:{precision:0},grid:{color:'rgba(15,23,42,.10)'}},x:{grid:{display:true,color:'rgba(15,23,42,.06)'},ticks:{autoSkip:true,maxTicksLimit:9,maxRotation:0,minRotation:0,callback:function(value){const label=this.getLabelForValue(value);const p=label.split('/');return p.length>=2?p[0]+'/'+p[1]:label;}}}}});
+function getDateRangeInfo(){
+  const di = $('dataIni').value ? new Date($('dataIni').value+'T00:00') : null;
+  const df = $('dataFim').value ? new Date($('dataFim').value+'T23:59') : null;
+  const datas = filtered.map(r=>r.data).filter(Boolean).sort((a,b)=>a-b);
+  const inicio = di || datas[0] || new Date();
+  const fim = df || datas[datas.length-1] || new Date();
+  const dias = Math.max(1, Math.ceil((fim-inicio)/(1000*60*60*24))+1);
+  return {inicio, fim, dias};
+}
+function monthLabel(d){
+  return d.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','').toUpperCase();
+}
+function dayLabel(d){
+  const dd = String(d.getDate()).padStart(2,'0');
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  return `${dd}/${mm}`;
+}
+function renderCharts(){
+  const faixa = getDateRangeInfo();
+  let agrupamento = 'dia';
+  if(faixa.dias > 365) agrupamento = 'ano';
+  else if(faixa.dias > 31) agrupamento = 'mes';
+
+  let byPeriodo = {};
+  let labels = [];
+  let titulo = 'Evolução diária das fichas';
+  let tooltipTitulo = 'Data';
+
+  if(agrupamento === 'dia'){
+    titulo = 'Evolução diária das fichas';
+    tooltipTitulo = 'Dia';
+    filtered.forEach(r=>{
+      if(!r.data) return;
+      const key = r.data.toISOString().slice(0,10);
+      byPeriodo[key] = (byPeriodo[key]||0)+1;
+    });
+    labels = Object.keys(byPeriodo).sort();
+  }
+
+  if(agrupamento === 'mes'){
+    titulo = 'Evolução mensal das fichas';
+    tooltipTitulo = 'Mês';
+    filtered.forEach(r=>{
+      if(!r.data) return;
+      const key = `${r.data.getFullYear()}-${String(r.data.getMonth()+1).padStart(2,'0')}`;
+      byPeriodo[key] = (byPeriodo[key]||0)+1;
+    });
+    labels = Object.keys(byPeriodo).sort();
+  }
+
+  if(agrupamento === 'ano'){
+    titulo = 'Evolução anual das fichas';
+    tooltipTitulo = 'Ano';
+    filtered.forEach(r=>{
+      if(!r.data) return;
+      const key = String(r.data.getFullYear());
+      byPeriodo[key] = (byPeriodo[key]||0)+1;
+    });
+    labels = Object.keys(byPeriodo).sort();
+  }
+
+  $('tituloEvolucao').textContent = titulo;
+
+  const displayLabels = labels.map(k=>{
+    if(agrupamento === 'dia'){
+      const d = new Date(k+'T00:00');
+      return dayLabel(d);
+    }
+    if(agrupamento === 'mes'){
+      const [y,m] = k.split('-');
+      return monthLabel(new Date(+y,+m-1,1));
+    }
+    return k;
+  });
+
+  chart('cEvolucao','line',displayLabels,labels.map(k=>byPeriodo[k]),{
+    plugins:{
+      legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},
+      tooltip:{enabled:true,callbacks:{title:(items)=>tooltipTitulo+': '+items[0].label,label:(item)=>'Fichas: '+item.parsed.y}},
+      valueLabelsPlugin:{display:true}
+    },
+    layout:{padding:{top:22,right:18,bottom:12,left:8}},
+    scales:{
+      y:{beginAtZero:true,ticks:{precision:0},grid:{color:'rgba(15,23,42,.10)'}},
+      x:{grid:{display:true,color:'rgba(15,23,42,.06)'},ticks:{autoSkip:true,maxTicksLimit:agrupamento==='dia'?10:12,maxRotation:0,minRotation:0}}
+    }
+  });
 const ordemResultado=['APROVADO','REPROVADO','INVÁLIDO','DUPLICADO'];const res=countBy(filtered,'classe');const resLabels=ordemResultado.filter(k=>res[k]).concat(Object.keys(res).filter(k=>!ordemResultado.includes(k)));chart('cResultado','doughnut',resLabels,resLabels.map(k=>res[k]),{cutout:'58%',plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},tooltip:{enabled:true,callbacks:{label:(item)=>`${item.label}: ${item.parsed}`}},centerTextPlugin:{display:true}}});
 const un=countBy(filtered,'unidade');const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]);chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},tooltip:{enabled:true,callbacks:{label:(item)=>'Quantidade: '+item.parsed.x}},valueLabelsPlugin:{display:true}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{grid:{display:false}}}});
 const tp=countBy(filtered,'tipo');chart('cTipo','pie',Object.keys(tp),Object.values(tp),{plugins:{legend:{display:true,position:'top',labels:{boxWidth:12,usePointStyle:true}},tooltip:{enabled:true,callbacks:{label:(item)=>`${item.label}: ${item.parsed}`}},centerTextPlugin:{display:true}}});
