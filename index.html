@@ -5,30 +5,33 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Brasil Web</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <style>
-    :root{--blue:#0b2f6b;--blue2:#174ea6;--light:#f4f7fb;--text:#1f2937;--muted:#6b7280;--green:#16a34a;--red:#dc2626;--orange:#f59e0b;--purple:#7c3aed;--border:#e5e7eb;--shadow:0 8px 24px rgba(15,23,42,.06)}
-    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:#fff;color:var(--text)}
+    :root{
+      --blue:#0b2f6b;--blue2:#174ea6;--light:#f4f7fb;--text:#1f2937;--muted:#6b7280;
+      --green:#16a34a;--red:#dc2626;--yellow:#facc15;--orange:#f59e0b;--purple:#7c3aed;--border:#e5e7eb;
+      --shadow:0 8px 24px rgba(15,23,42,.06);
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:white;color:var(--text)}
     .wrap{max-width:1480px;margin:0 auto;padding:22px}
-    header{background:white;border:1px solid var(--border);border-radius:20px;padding:24px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:18px;align-items:center}
-    .brand h1{margin:0;color:var(--blue);font-size:34px;letter-spacing:.5px}.brand p{margin:4px 0 0;color:var(--blue2);font-weight:800;font-size:18px}.month{color:var(--muted);font-weight:700;text-align:right;line-height:1.45}.month small{display:block;color:var(--green);font-weight:800;margin-top:3px}
+    header{background:white;border:1px solid var(--border);border-radius:20px;padding:24px 28px;box-shadow:var(--shadow);display:flex;justify-content:space-between;gap:18px;align-items:center;overflow:hidden}
+    .brand h1{margin:0;color:var(--blue);font-size:34px;letter-spacing:.5px}.brand p{margin:4px 0 0;color:var(--blue2);font-weight:800;font-size:18px}
+    .updateBox{text-align:right;color:var(--muted);font-weight:800;white-space:nowrap}.online{color:var(--green);font-size:13px;margin-top:6px}.dot{display:inline-block;width:12px;height:12px;background:var(--green);border-radius:50%;box-shadow:0 0 10px rgba(22,163,74,.65);vertical-align:middle;margin-right:6px}
+    .status{padding:12px 14px;border-radius:14px;background:#eff6ff;color:#1d4ed8;margin:16px 0;border:1px solid #bfdbfe;font-weight:800}.error{background:#fef2f2;color:#991b1b;border-color:#fecaca}
     .tabs{display:flex;gap:10px;margin:18px 0}.tab{border:1px solid var(--border);background:white;color:var(--blue);padding:11px 18px;border-radius:999px;font-weight:800;cursor:pointer}.tab.active{background:var(--blue);color:white}
-    .filters{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin:16px 0}.filter{background:white;border:1px solid var(--border);border-radius:14px;padding:10px;box-shadow:0 4px 16px rgba(15,23,42,.04);position:relative}.filter label{font-size:12px;color:var(--muted);font-weight:800;display:block;margin-bottom:6px}.filter select,.filter input{width:100%;border:0;outline:0;font-size:14px;background:white;color:var(--text)}
-    .multiBtn{width:100%;border:0;background:white;text-align:left;font-size:14px;color:var(--text);cursor:pointer;display:flex;justify-content:space-between;align-items:center}.multiPanel{display:none;position:absolute;z-index:30;top:68px;left:0;right:0;background:white;border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 32px rgba(15,23,42,.18);padding:10px;max-height:260px;overflow:auto}.multiPanel.open{display:block}.multiActions{display:flex;gap:8px;margin-bottom:8px}.miniBtn{border:1px solid var(--border);background:#f8fafc;border-radius:9px;padding:6px 8px;font-weight:700;cursor:pointer;color:var(--blue)}.chkRow{display:block;padding:6px 4px;border-radius:8px;font-size:13px}.chkRow:hover{background:#f8fafc}.chkRow input{width:auto;margin-right:6px}
-    .actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:15px 0}.btn{border:none;padding:12px 18px;border-radius:12px;font-weight:900;cursor:pointer;box-shadow:0 6px 16px rgba(15,23,42,.08)}.btnExcel{background:var(--green);color:white}.btnRefresh{background:var(--blue);color:white}.actionHint{font-size:12px;color:var(--muted);font-weight:700}
+    .filters{display:grid;grid-template-columns:1fr 1fr 1.25fr 1fr 1fr 1fr;gap:12px;margin:16px 0}.filter{background:white;border:1px solid var(--border);border-radius:14px;padding:10px 12px;box-shadow:0 4px 16px rgba(15,23,42,.04);position:relative}.filter label{font-size:12px;color:var(--muted);font-weight:800;display:block;margin-bottom:6px}.filter select,.filter input{width:100%;border:0;outline:0;font-size:14px;background:white;color:var(--text);min-height:26px}
+    .unitDrop{cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px;min-height:26px}.unitDrop .text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.unitPanel{display:none;position:absolute;z-index:50;left:0;right:0;top:100%;background:white;border:1px solid var(--border);box-shadow:0 18px 45px rgba(15,23,42,.18);border-radius:14px;margin-top:6px;padding:10px;max-height:280px;overflow:auto}.unitPanel.open{display:block}.unitActions{display:flex;gap:8px;margin-bottom:8px}.miniBtn{border:1px solid var(--border);background:#f8fafc;color:var(--blue);font-weight:800;border-radius:8px;padding:6px 8px;cursor:pointer;font-size:12px}.chkLine{display:flex;align-items:center;gap:8px;padding:5px 3px;font-size:13px}.chkLine input{width:auto;min-height:auto}.actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 16px}.btn{border:0;border-radius:12px;padding:13px 18px;font-weight:900;cursor:pointer;color:white}.btnReport{background:var(--green)}.hintAction{color:var(--muted);font-size:13px;font-weight:800}
     .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin:16px 0}.kpi{background:white;border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.kpi .label{color:var(--muted);font-size:13px;font-weight:800}.kpi .value{font-size:30px;font-weight:900;margin-top:6px}.kpi .hint{font-size:12px;color:var(--muted);margin-top:4px}
-    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:16px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}.card{background:white;border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.card h3{margin:0;color:var(--blue);font-size:17px}.cardHeader{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}.chartMode{font-size:12px;color:var(--muted);font-weight:800;background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:6px 10px;white-space:nowrap}.chartBox{height:330px}.chartBoxSmall{height:300px}.hidden{display:none!important}
-    table{width:100%;border-collapse:collapse;font-size:13px}th{background:var(--blue);color:white;text-align:left;padding:10px;position:sticky;top:0}td{border-bottom:1px solid var(--border);padding:9px}tr:hover{background:#f8fafc}.tableWrap{max-height:650px;overflow:auto;border:1px solid var(--border);border-radius:14px}.badge{padding:5px 9px;border-radius:999px;font-weight:900;font-size:11px;display:inline-block}.ok{background:#dcfce7;color:#166534}.rep{background:#fee2e2;color:#991b1b}.inv{background:#ffedd5;color:#9a3412}.dup{background:#ede9fe;color:#5b21b6}.other{background:#e5e7eb;color:#374151}.status{padding:12px;border-radius:14px;background:#eff6ff;color:#1d4ed8;margin:16px 0;border:1px solid #bfdbfe;font-weight:700}.error{background:#fef2f2;color:#991b1b;border-color:#fecaca}.footer{color:var(--muted);font-size:12px;margin-top:16px;text-align:right}
-    @media(max-width:1050px){.filters,.kpis,.grid3{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}@media(max-width:650px){.filters,.kpis,.grid3{grid-template-columns:1fr}header{display:block}.month{text-align:left;margin-top:10px}.brand h1{font-size:26px}.chartBox,.chartBoxSmall{height:280px}}
+    .grid{display:grid;grid-template-columns:1.25fr .75fr;gap:16px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:16px}.card{background:white;border:1px solid var(--border);border-radius:18px;padding:18px;box-shadow:var(--shadow)}.cardHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}.card h3{margin:0;color:var(--blue);font-size:18px}.pill{font-size:12px;font-weight:900;color:var(--muted);background:#f8fafc;border:1px solid var(--border);border-radius:999px;padding:8px 12px}.chartBox{height:330px}.chartBoxSmall{height:300px}.hidden{display:none!important}
+    table{width:100%;border-collapse:collapse;font-size:13px}th{background:var(--blue);color:white;text-align:left;padding:10px;position:sticky;top:0}td{border-bottom:1px solid var(--border);padding:9px}tr:hover{background:#f8fafc}.tableWrap{max-height:650px;overflow:auto;border:1px solid var(--border);border-radius:14px}.badge{padding:5px 9px;border-radius:999px;font-weight:900;font-size:11px;display:inline-block}.ok{background:#dcfce7;color:#166534}.rep{background:#fee2e2;color:#991b1b}.inv{background:#fef9c3;color:#854d0e}.dup{background:#ffedd5;color:#9a3412}.other{background:#e5e7eb;color:#374151}.footer{color:var(--muted);font-size:12px;margin-top:16px;text-align:right}
+    @media(max-width:1120px){.filters,.kpis,.grid3{grid-template-columns:1fr 1fr}.grid{grid-template-columns:1fr}}@media(max-width:720px){.filters,.kpis,.grid3{grid-template-columns:1fr}header{display:block}.updateBox{text-align:left;margin-top:12px}.brand h1{font-size:26px}}
   </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand"><h1>BRASIL WEB</h1><p>A BRASIL NÃO PARA</p></div>
-    <div class="month"><div id="lastUpdate">Atualizando dados...</div><small>🟢 Atualização automática</small></div>
+    <div class="updateBox"><div id="lastUpdate">Atualizando dados...</div><div class="online"><span class="dot"></span>Atualização automática</div></div>
   </header>
   <div id="status" class="status">Carregando dados da planilha Google Sheets...</div>
   <div class="tabs"><button class="tab active" data-tab="exec">Executivo</button><button class="tab" data-tab="det">Detalhamento Operacional</button></div>
@@ -36,23 +39,13 @@
   <section class="filters">
     <div class="filter"><label>Data início</label><input id="dataIni" type="date"></div>
     <div class="filter"><label>Data fim</label><input id="dataFim" type="date"></div>
-    <div class="filter">
-      <label>Unidade</label>
-      <button type="button" id="btnMultiUnidade" class="multiBtn"><span id="txtUnidades">Todas</span><span>▼</span></button>
-      <div id="panelUnidade" class="multiPanel">
-        <div class="multiActions"><button class="miniBtn" id="selTodas" type="button">Todas</button><button class="miniBtn" id="limparTodas" type="button">Limpar</button></div>
-        <div id="listaUnidades"></div>
-      </div>
-    </div>
+    <div class="filter" id="unitFilterBox"><label>Unidade</label><div class="unitDrop" id="unitToggle"><span class="text" id="unitText">Todas</span><span>▼</span></div><div class="unitPanel" id="unitPanel"><div class="unitActions"><button class="miniBtn" id="marcarTodas" type="button">Marcar todas</button><button class="miniBtn" id="limparUnidades" type="button">Limpar</button></div><div id="unitList"></div></div></div>
     <div class="filter"><label>Resultado</label><select id="fResultado"><option value="">Todos</option></select></div>
     <div class="filter"><label>Tipo Operação</label><select id="fTipo"><option value="">Todos</option></select></div>
     <div class="filter"><label>Pesquisar</label><input id="fBusca" placeholder="Ficha, motorista, CPF ou placa"></div>
   </section>
 
-  <div class="actions">
-    <button id="btnRelatorio" class="btn btnExcel">📄 Gerar Relatório Gerencial</button>
-    <span class="actionHint">O relatório respeita os filtros de período, unidades, resultado, tipo e pesquisa.</span>
-  </div>
+  <div class="actions"><button id="btnRelatorio" class="btn btnReport">📄 Gerar Relatório Gerencial</button><span class="hintAction">O relatório respeita os filtros de período, unidades, resultado, tipo e pesquisa.</span></div>
 
   <main id="exec">
     <section class="kpis">
@@ -60,12 +53,12 @@
       <div class="kpi"><div class="label">Aprovadas</div><div id="kAprov" class="value" style="color:var(--green)">0</div><div class="hint">OK / Aprovado</div></div>
       <div class="kpi"><div class="label">Taxa de Aprovação</div><div id="kTaxa" class="value" style="color:var(--blue2)">0%</div><div class="hint">Aprovadas ÷ Total</div></div>
       <div class="kpi"><div class="label">Reprovadas</div><div id="kRep" class="value" style="color:var(--red)">0</div><div class="hint">Ocorrências negativas</div></div>
-      <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--orange)">0</div><div class="hint">Pesquisa inválida</div></div>
-      <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--purple)">0</div><div class="hint">Ficha duplicada</div></div>
+      <div class="kpi"><div class="label">Inválidas</div><div id="kInv" class="value" style="color:var(--yellow)">0</div><div class="hint">Pesquisa inválida</div></div>
+      <div class="kpi"><div class="label">Duplicadas</div><div id="kDup" class="value" style="color:var(--orange)">0</div><div class="hint">Ficha duplicada</div></div>
     </section>
     <section class="grid">
-      <div class="card"><div class="cardHeader"><h3 id="tituloEvolucao">Evolução das fichas</h3><div id="modoEvolucao" class="chartMode">Visualização</div></div><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div>
-      <div class="card"><h3>Resultado geral</h3><div class="chartBox"><canvas id="cResultado"></canvas></div></div>
+      <div class="card"><div class="cardHead"><h3 id="tituloEvolucao">Evolução diária das fichas</h3><span class="pill" id="modoEvolucao">Visualização: Diária</span></div><div class="chartBox"><canvas id="cEvolucao"></canvas></div></div>
+      <div class="card"><div class="cardHead"><h3>Resultado geral</h3></div><div class="chartBox"><canvas id="cResultado"></canvas></div></div>
     </section>
     <section class="grid3">
       <div class="card"><h3>Resultado por unidade</h3><div class="chartBoxSmall"><canvas id="cUnidade"></canvas></div></div>
@@ -75,251 +68,66 @@
     <section class="card" style="margin-top:16px"><h3>Ranking das unidades</h3><div class="tableWrap" style="max-height:330px"><table id="rankTable"></table></div></section>
   </main>
 
-  <main id="det" class="hidden">
-    <section class="card"><h3>Detalhamento operacional</h3><div class="tableWrap"><table id="detailTable"></table></div></section>
-  </main>
-  <div class="footer">Dashboard conectado ao Google Sheets publicado em CSV.</div>
+  <main id="det" class="hidden"><section class="card"><h3>Detalhamento operacional</h3><div class="tableWrap"><table id="detailTable"></table></div></section></main>
+  <div class="footer">Dashboard conectado ao Google Sheets publicado em CSV. Atualização automática a cada 5 minutos.</div>
 </div>
 <script>
-const CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRCZQkw-OgPURjkMYr72F0QE-P60YyoC4DrGWNejeAzdrwN1-i9L_YQ0PF5y0oJ7mkjFPF87mbrvjq4/pub?output=csv';
-let raw=[], filtered=[], charts={}, primeiraCarga=true;
+const CSV_URL='https://docs.google.com/spreadsheets/d/e/2PACX-1vRCZQkw-OgPURjkMYr72F0QE-P60YyoC4DrGWNejeAzdrwN1-i9L_YQ0PF5y0oJ7mkjFPF87mbrvjq4/pub?output=csv';
+let raw=[], filtered=[], charts={}, filtrosInicializados=false, usuarioAlterouData=false;
 const $=id=>document.getElementById(id);
 const norm=s=>(s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toUpperCase();
 const fmtDate=d=> d ? d.toLocaleDateString('pt-BR') : '';
-const fmtDateTime=d=> d ? d.toLocaleString('pt-BR') : '';
+const iso=d=> d ? new Date(d.getFullYear(),d.getMonth(),d.getDate()).toISOString().slice(0,10) : '';
 function parseDate(v){ if(!v) return null; const s=v.toString().trim(); const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/); if(m){let y=+m[3]; if(y<100)y+=2000; return new Date(y,+m[2]-1,+m[1]);} const d=new Date(s); return isNaN(d)?null:d; }
-function isoLocal(d){ const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
 function pick(row,names){ const keys=Object.keys(row); for(const n of names){ const hit=keys.find(k=>norm(k)===norm(n)); if(hit) return row[hit]||'';} return '';}
 function classify(r){ const res=norm(r.resultado), mot=norm(r.motivo); if(res.includes('DUPLIC')) return 'DUPLICADO'; if(res.includes('REPROV')) return 'REPROVADO'; if(res.includes('INVALID')||res.includes('INVÁLID')) return 'INVÁLIDO'; if(res==='OK'||res.includes('APROV')) return 'APROVADO'; if(mot) return 'INVÁLIDO'; return r.resultado || 'SEM RESULTADO'; }
 function normalizeRows(data){ return data.filter(r=>Object.values(r).some(v=>(v||'').toString().trim())).map(r=>{ const obj={ ficha:pick(r,['FICHA','Nº FICHA','NUMERO FICHA']), dataTxt:pick(r,['DT DE INCLUSÃO','DATA','DATA INCLUSÃO','DT INCLUSAO']), unidade:pick(r,['UNIDADE']), tipo:pick(r,['LAST OU TRANSF.','LAST OU TRANSF','TIPO','OPERAÇÃO','OPERACAO']), motorista:pick(r,['MOTORISTA']), cpf:pick(r,['CPF DO MOTORISTA','CPF']), placa:pick(r,['PLACAS','PLACA']), resultado:pick(r,['RESULTADO','OBS']), motivo:pick(r,['MOTIVO INVALIDO','MOTIVO INVÁLIDO','MOTIVO']) }; obj.data=parseDate(obj.dataTxt); obj.classe=classify(obj); return obj; }); }
 function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR')); }
-function getUnidadesSelecionadas(){ return [...document.querySelectorAll('.chkUnidade:checked')].map(c=>c.value); }
-function atualizaTextoUnidades(){ const todas=uniq(raw.map(r=>r.unidade)); const sel=getUnidadesSelecionadas(); $('txtUnidades').textContent = (!sel.length || sel.length===todas.length) ? 'Todas' : (sel.length===1 ? sel[0] : `${sel.length} unidades selecionadas`); }
-function criarFiltroUnidades(){ const lista=$('listaUnidades'); lista.innerHTML=''; const unidades=uniq(raw.map(r=>r.unidade)); unidades.forEach(v=>{ const label=document.createElement('label'); label.className='chkRow'; label.innerHTML=`<input type="checkbox" class="chkUnidade" value="${v}" checked> ${v}`; lista.appendChild(label); }); document.querySelectorAll('.chkUnidade').forEach(chk=>chk.addEventListener('change',()=>{ atualizaTextoUnidades(); applyFilters(); })); atualizaTextoUnidades(); }
-function getDataUltimaAtualizacao(){
-  const datas=raw.map(r=>r.data).filter(Boolean).sort((a,b)=>b-a);
-  return datas[0] || new Date();
+function selectedUnits(){ const all=[...document.querySelectorAll('.chkUnidade')]; const checked=all.filter(c=>c.checked).map(c=>c.value); return checked.length===all.length?[]:checked; }
+function updateUnitText(){ const all=[...document.querySelectorAll('.chkUnidade')]; const checked=all.filter(c=>c.checked).map(c=>c.value); if(!all.length||checked.length===all.length) $('unitText').textContent='Todas'; else if(checked.length===0) $('unitText').textContent='Nenhuma'; else if(checked.length<=2) $('unitText').textContent=checked.join(', '); else $('unitText').textContent=`${checked.length} unidades selecionadas`; }
+function populateUnits(){ const list=$('unitList'); const prev=[...document.querySelectorAll('.chkUnidade:checked')].map(c=>c.value); list.innerHTML=''; uniq(raw.map(r=>r.unidade)).forEach(v=>{ const label=document.createElement('label'); label.className='chkLine'; const checked=(!filtrosInicializados || prev.length===0 || prev.includes(v))?'checked':''; label.innerHTML=`<input type="checkbox" class="chkUnidade" value="${v}" ${checked}> <span>${v}</span>`; list.appendChild(label); }); document.querySelectorAll('.chkUnidade').forEach(c=>c.addEventListener('change',()=>{updateUnitText();applyFilters();})); updateUnitText(); }
+function populateSelect(id,key){ const sel=$(id), valorAtual=sel.value; sel.innerHTML='<option value="">Todos</option>'; uniq(raw.map(r=>r[key])).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);}); if([...sel.options].some(o=>o.value===valorAtual)) sel.value=valorAtual; }
+function ajustarDatasPelaBase(){ const dates=raw.map(r=>r.data).filter(Boolean).sort((a,b)=>a-b); if(!dates.length) return; if(!filtrosInicializados){ $('dataIni').value='2026-01-01'; }
+  // Data final sempre acompanha a maior data existente na planilha, em toda atualização automática.
+  $('dataFim').value=iso(dates[dates.length-1]);
 }
-function populateFilters(){
-  [['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{ const sel=$(id); const atual=sel.value; sel.innerHTML='<option value="">Todos</option>'; uniq(raw.map(r=>r[key])).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);}); if([...sel.options].some(o=>o.value===atual)) sel.value=atual; });
-  criarFiltroUnidades();
-  if(primeiraCarga){
-    $('dataIni').value='2026-01-01';
-    $('dataFim').value=isoLocal(getDataUltimaAtualizacao());
-    primeiraCarga=false;
-  }
-}
-function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const unidades=getUnidadesSelecionadas(); const totalUnidades=uniq(raw.map(r=>r.unidade)).length; const res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(unidades.length && unidades.length!==totalUnidades && !unidades.includes(r.unidade))return false; if(!unidades.length)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
+function populateFilters(){ populateSelect('fResultado','classe'); populateSelect('fTipo','tipo'); populateUnits(); ajustarDatasPelaBase(); filtrosInicializados=true; }
+function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const unidades=selectedUnits(); const res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(unidades.length&&!unidades.includes(r.unidade))return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
 function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
 function destroy(id){ if(charts[id]) charts[id].destroy(); }
-function chart(id,type,labels,data,opts={}){ destroy(id); const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:type!=='bar'&&type!=='line'},tooltip:{enabled:true,backgroundColor:'#0f172a',titleFont:{weight:'bold'},bodyFont:{weight:'600'},padding:12,callbacks:{label:(ctx)=>`Quantidade: ${ctx.formattedValue}`}},datalabels:{display:ctx=> ctx.dataset.data.length<=18 || type==='doughnut' || type==='pie',anchor:type==='bar'?'end':'end',align:type==='bar'?'right':'top',offset:4,color:'#1f2937',font:{weight:'800',size:11},formatter:v=>v? v : ''}},scales:type==='doughnut'||type==='pie'?{}:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:14}}}}; const dataset={label:'Quantidade',data,borderWidth:3,tension:.35,pointRadius:4,pointHoverRadius:7,fill:false};
-
-  if(id==="cResultado"){
-    dataset.backgroundColor=labels.map(l=>{
-      const x=(l||"").toUpperCase();
-      if(x==="APROVADO") return "#16a34a";
-      if(x==="REPROVADO") return "#dc2626";
-      if(x==="INVÁLIDO" || x==="INVALIDO") return "#facc15";
-      if(x==="DUPLICADO") return "#f97316";
-      return "#94a3b8";
-    });
-    dataset.borderColor="#ffffff";
-    dataset.borderWidth=2;
-  }
-
-  charts[id]=new Chart($(id),{type,data:{labels,datasets:[dataset]},options:{...base,...opts},plugins:[ChartDataLabels]}); }
-function periodoDias(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null; const df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; if(!di||!df) return 0; return Math.ceil((df-di)/(1000*60*60*24))+1; }
-function chaveEvolucao(r, modo){ if(!r.data) return 'Sem data'; if(modo==='DIA') return String(r.data.getDate()).padStart(2,'0')+'/'+String(r.data.getMonth()+1).padStart(2,'0'); if(modo==='MES') return r.data.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}).replace('.','').toUpperCase(); return String(r.data.getFullYear()); }
-function ordemEvolucao(label, modo){ if(label==='Sem data') return 99999999; if(modo==='DIA'){ const [d,m]=label.split('/').map(Number); const ano=$('dataIni').value?Number($('dataIni').value.slice(0,4)):new Date().getFullYear(); return new Date(ano,m-1,d).getTime(); } if(modo==='MES'){ const meses=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']; const p=label.split(' '); return (2000+Number(p[1]))*12 + meses.indexOf(p[0].slice(0,3)); } return Number(label); }
+function colorFor(label){ const c=norm(label); if(c==='APROVADO') return '#16a34a'; if(c==='REPROVADO') return '#dc2626'; if(c==='INVÁLIDO'||c==='INVALIDO') return '#facc15'; if(c==='DUPLICADO') return '#f59e0b'; return '#7c3aed'; }
+const valueLabelsPlugin={id:'valueLabels',afterDatasetsDraw(chart,args,opts){ if(!opts||!opts.display)return; const {ctx}=chart; ctx.save(); ctx.font='bold 12px Segoe UI, Arial'; ctx.fillStyle='#111827'; ctx.textAlign='center'; ctx.textBaseline='middle'; chart.data.datasets.forEach((dataset,di)=>{ const meta=chart.getDatasetMeta(di); meta.data.forEach((el,i)=>{ const val=dataset.data[i]; if(val===0||val==null)return; const p=el.tooltipPosition(); if(chart.config.type==='bar' && chart.options.indexAxis==='y'){ctx.textAlign='left'; ctx.fillText(val,p.x+10,p.y);} else if(chart.config.type==='doughnut' || chart.config.type==='pie'){ctx.fillText(val,p.x,p.y);} else {ctx.fillText(val,p.x,p.y-14);} }); }); ctx.restore(); }};
+const centerTextPlugin={id:'centerText',afterDraw(chart,args,opts){ if(!opts||!opts.display)return; const {ctx,chartArea:{left,right,top,bottom}}=chart; ctx.save(); ctx.font='900 22px Segoe UI, Arial'; ctx.fillStyle='#1f2937'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(opts.text||'',(left+right)/2,(top+bottom)/2); ctx.restore(); }};
+Chart.register(valueLabelsPlugin,centerTextPlugin);
+function chart(id,type,labels,data,opts={}){ destroy(id); const bg=opts.backgroundColor || (type==='doughnut'||type==='pie'?labels.map(colorFor):undefined); charts[id]=new Chart($(id),{type,data:{labels,datasets:[{label:'Quantidade',data,borderWidth:3,tension:.35,pointRadius:5,pointHoverRadius:7,backgroundColor:bg,borderColor:type==='line'?'#2ea3f2':bg}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:type!=='bar'&&type!=='line',position:'top'},tooltip:{enabled:true,backgroundColor:'#111827',titleFont:{weight:'bold'},bodyFont:{weight:'bold'},padding:12,callbacks:{label:function(ctx){ const total=ctx.dataset.data.reduce((a,b)=>a+(+b||0),0); const v=ctx.parsed.y??ctx.parsed.x??ctx.parsed; const pct=total?` (${((v/total)*100).toFixed(1).replace('.',',')}%)`:''; return ` ${ctx.dataset.label||ctx.label}: ${v}${type==='doughnut'||type==='pie'?pct:''}`; }}},valueLabels:{display:opts.showLabels||false},centerText:{display:opts.centerText?true:false,text:opts.centerText||''}},scales:(type==='doughnut'||type==='pie')?{}:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:12}}},...opts}}); }
+function periodoDias(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; if(!di||!df) return 0; return Math.ceil((df-di)/(1000*60*60*24))+1; }
+function keyEvolucao(r,modo){ if(!r.data)return 'Sem data'; if(modo==='anual') return String(r.data.getFullYear()); if(modo==='mensal') return r.data.toLocaleDateString('pt-BR',{month:'short',year:'numeric'}).replace('.','').toUpperCase(); return r.data.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}); }
+function sortEvolucaoLabels(labels,modo){ const meses={JAN:0,FEV:1,MAR:2,ABR:3,MAI:4,JUN:5,JUL:6,AGO:7,SET:8,OUT:9,NOV:10,DEZ:11}; return labels.sort((a,b)=>{ if(modo==='anual') return (+a)-(+b); if(modo==='mensal'){ const pa=a.split(' '), pb=b.split(' '); return (+pa[1]-(+pb[1])) || ((meses[pa[0]]??0)-(meses[pb[0]]??0)); } const da=parseDate(a+'/'+(new Date().getFullYear())); const db=parseDate(b+'/'+(new Date().getFullYear())); return da-db; }); }
+function modoEvolucao(){ const dias=periodoDias(); if(dias>365) return 'anual'; if(dias>31) return 'mensal'; return 'diaria'; }
 function renderKPIs(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; $('kTotal').textContent=total; $('kAprov').textContent=ap; $('kRep').textContent=rp; $('kInv').textContent=inv; $('kDup').textContent=dup; $('kTaxa').textContent= total? ((ap/total)*100).toFixed(1).replace('.',',')+'%' : '0%'; }
-function renderCharts(){
-  const fimFiltro=$('dataFim').value?new Date($('dataFim').value+'T00:00'):getDataUltimaAtualizacao();
-  const inicioMes=new Date(fimFiltro.getFullYear(), fimFiltro.getMonth(), 1);
-  const fimMes=fimFiltro;
-  const mesLabel=fimFiltro.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
-
-  $('tituloEvolucao').textContent='Evolução diária das fichas - mês corrente';
-  $('modoEvolucao').textContent='Visualização: '+mesLabel;
-
-  const evoBase=filtered.filter(r=>r.data && r.data>=inicioMes && r.data<=fimMes);
-  const byEvo=countBy(evoBase,r=>chaveEvolucao(r,'DIA'));
-  const evoLabels=[];
-  for(let d=new Date(inicioMes); d<=fimMes; d.setDate(d.getDate()+1)){
-    evoLabels.push(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
-  }
-  chart('cEvolucao','line',evoLabels,evoLabels.map(k=>byEvo[k]||0),{scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:16}}}});
-
-  const res=countBy(filtered,'classe');
-  chart('cResultado','doughnut',Object.keys(res),Object.values(res));
-  const un=countBy(filtered,'unidade');
-  const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]);
-  chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}});
-  const tp=countBy(filtered,'tipo');
-  chart('cTipo','pie',Object.keys(tp),Object.values(tp));
-  const mot=countBy(filtered.filter(r=>r.motivo),'motivo');
-  const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
-  chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}});
-}
+function renderCharts(){ const modo=modoEvolucao(); const modoLabel=modo==='diaria'?'Diária':modo==='mensal'?'Mensal':'Anual'; $('tituloEvolucao').textContent=`Evolução ${modo==='diaria'?'diária':modo==='mensal'?'mensal':'anual'} das fichas`; $('modoEvolucao').textContent='Visualização: '+modoLabel; const byEvo=countBy(filtered,r=>keyEvolucao(r,modo)); const evoLabels=sortEvolucaoLabels(Object.keys(byEvo),modo); chart('cEvolucao','line',evoLabels,evoLabels.map(k=>byEvo[k]),{showLabels:false,scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:modo==='diaria'?12:14}}}});
+  const ordem=['APROVADO','REPROVADO','INVÁLIDO','DUPLICADO']; const res=countBy(filtered,'classe'); const resLabels=ordem.filter(k=>res[k]); chart('cResultado','doughnut',resLabels,resLabels.map(k=>res[k]),{showLabels:true,centerText:String(filtered.length),cutout:'58%',backgroundColor:resLabels.map(colorFor)});
+  const un=countBy(filtered,'unidade'); const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]); chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',showLabels:true,plugins:{legend:{display:false},valueLabels:{display:true},tooltip:{enabled:true}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}});
+  const tp=countBy(filtered,'tipo'); chart('cTipo','pie',Object.keys(tp),Object.values(tp),{showLabels:true});
+  const mot=countBy(filtered.filter(r=>r.motivo),'motivo'); const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]); chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',showLabels:true,plugins:{legend:{display:false},valueLabels:{display:true},tooltip:{enabled:true}},scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}}); }
 function badge(c){ const cls=c==='APROVADO'?'ok':c==='REPROVADO'?'rep':c==='INVÁLIDO'?'inv':c==='DUPLICADO'?'dup':'other'; return `<span class="badge ${cls}">${c}</span>`; }
-function getResumo(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; return {total,ap,rp,inv,dup,taxa:total?((ap/total)*100):0}; }
-function getRanking(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); return Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>({unidade:u,total:v.t,aprovadas:v.a,taxa:v.t?((v.a/v.t)*100):0,reprovadas:v.r,invalidas:v.i,duplicadas:v.d})); }
-function renderRank(){ const rows=getRanking().map(v=>`<tr><td>${v.unidade}</td><td>${v.total}</td><td>${v.aprovadas}</td><td>${v.taxa.toFixed(1).replace('.',',')}%</td><td>${v.reprovadas}</td><td>${v.invalidas}</td><td>${v.duplicadas}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
+function renderRank(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); const rows=Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>`<tr><td>${u}</td><td>${v.t}</td><td>${v.a}</td><td>${v.t?((v.a/v.t)*100).toFixed(1).replace('.',','):0}%</td><td>${v.r}</td><td>${v.i}</td><td>${v.d}</td></tr>`).join(''); $('rankTable').innerHTML='<thead><tr><th>Unidade</th><th>Total</th><th>Aprovadas</th><th>% Aprovação</th><th>Reprovadas</th><th>Inválidas</th><th>Duplicadas</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderDetail(){ const rows=filtered.map(r=>`<tr><td>${r.unidade||''}</td><td>${r.ficha||''}</td><td>${fmtDate(r.data)}</td><td>${r.tipo||''}</td><td>${r.motorista||''}</td><td>${r.cpf||''}</td><td>${r.placa||''}</td><td>${badge(r.classe)}</td><td>${r.motivo||''}</td></tr>`).join(''); $('detailTable').innerHTML='<thead><tr><th>Unidade</th><th>Ficha</th><th>Data</th><th>Tipo</th><th>Motorista</th><th>CPF</th><th>Placa</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>'+rows+'</tbody>'; }
 function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail(); }
-function periodoTexto(){ const i=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null; const f=$('dataFim').value?new Date($('dataFim').value+'T00:00'):null; return `${fmtDate(i)} até ${fmtDate(f)}`; }
-function unidadesTexto(){ const unidades=getUnidadesSelecionadas(); const todas=uniq(raw.map(r=>r.unidade)); if(!unidades.length) return 'Nenhuma unidade selecionada'; if(unidades.length===todas.length) return 'Todas as unidades'; return unidades.join(', '); }
-function aoa_to_sheet_with_widths(aoa,widths){ const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=widths.map(w=>({wch:w})); return ws; }
-function getConsolidadoUnidades(){
-  const map={};
-  filtered.forEach(r=>{
-    const u=r.unidade||'Não informado';
-    if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0};
-    map[u].t++;
-    if(r.classe==='APROVADO')map[u].a++;
-    if(r.classe==='REPROVADO')map[u].r++;
-    if(r.classe==='INVÁLIDO')map[u].i++;
-    if(r.classe==='DUPLICADO')map[u].d++;
-  });
-  return Object.entries(map)
-    .sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'))
-    .map(([u,v])=>({
-      unidade:u,
-      total:v.t,
-      aprovadas:v.a,
-      taxa:v.t?((v.a/v.t)*100):0,
-      reprovadas:v.r,
-      invalidas:v.i,
-      duplicadas:v.d
-    }));
-}
-function addSheet(wb,nome,aoa,widths,opts={}){
-  const ws=aoa_to_sheet_with_widths(aoa,widths);
-  if(opts.merges) ws['!merges']=opts.merges;
-  if(opts.autofilter) ws['!autofilter']=opts.autofilter;
-  if(opts.freeze) ws['!freeze']=opts.freeze;
-  XLSX.utils.book_append_sheet(wb,ws,nome);
-}
-function gerarRelatorioGerencial(){
-  if(!window.XLSX){
-    alert('Biblioteca do Excel ainda não carregou. Tente novamente em alguns segundos.');
-    return;
-  }
-
-  const r=getResumo();
-  const emitido=new Date();
-  const taxa=r.taxa.toFixed(1).replace('.',',')+'%';
-  const periodo=periodoTexto();
-  const unidades=unidadesTexto();
-
-  const aoaResumo=[
-    ['BRASIL WEB'],
-    ['A BRASIL NÃO PARA'],
-    [],
-    ['RELATÓRIO GERENCIAL DE PESQUISAS'],
-    ['Resumo executivo consolidado'],
-    [],
-    ['Período analisado', periodo],
-    ['Unidades consideradas', unidades],
-    ['Emitido em', fmtDateTime(emitido)],
-    [],
-    ['INDICADORES GERAIS'],
-    ['Indicador','Resultado','Descrição'],
-    ['Total de pesquisas', r.total, 'Quantidade total de fichas consideradas nos filtros aplicados'],
-    ['Aprovadas', r.ap, 'Pesquisas/fichas classificadas como aprovadas'],
-    ['Reprovadas', r.rp, 'Pesquisas/fichas classificadas como reprovadas'],
-    ['Inválidas', r.inv, 'Registros classificados como inválidos'],
-    ['Duplicadas', r.dup, 'Registros identificados como duplicados'],
-    ['Taxa de aprovação', taxa, 'Percentual de aprovadas sobre o total filtrado'],
-    [],
-    ['DISTRIBUIÇÃO POR RESULTADO'],
-    ['Resultado','Quantidade','Participação'],
-    ['Aprovado', r.ap, r.total?((r.ap/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Reprovado', r.rp, r.total?((r.rp/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Inválido', r.inv, r.total?((r.inv/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Duplicado', r.dup, r.total?((r.dup/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    [],
-    ['OBSERVAÇÕES GERENCIAIS'],
-    ['Este relatório apresenta uma visão consolidada dos dados filtrados no dashboard.'],
-    ['A aba por unidade tem finalidade técnica e operacional, sem ranking ou comparação competitiva.'],
-    ['Os dados respeitam exatamente os filtros selecionados no momento da geração do arquivo.'],
-    [],
-    ['Relatório gerado automaticamente pelo Dashboard Brasil Web'],
-    ['Brasil Web - A Brasil Não Para']
-  ];
-
-  const consolidado=[
-    ['CONSOLIDADO POR UNIDADE OPERACIONAL'],
-    ['Visão técnica organizada em ordem alfabética, sem ranking entre unidades.'],
-    [],
-    ['Unidade','Total','Aprovadas','% Aprovação','Reprovadas','Inválidas','Duplicadas'],
-    ...getConsolidadoUnidades().map(x=>[
-      x.unidade,
-      x.total,
-      x.aprovadas,
-      x.taxa.toFixed(1).replace('.',',')+'%',
-      x.reprovadas,
-      x.invalidas,
-      x.duplicadas
-    ])
-  ];
-
-  const resultados=[
-    ['DISTRIBUIÇÃO CONSOLIDADA POR RESULTADO'],
-    ['Resumo técnico dos status encontrados nos filtros aplicados.'],
-    [],
-    ['Resultado','Quantidade','Participação'],
-    ['Aprovado', r.ap, r.total?((r.ap/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Reprovado', r.rp, r.total?((r.rp/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Inválido', r.inv, r.total?((r.inv/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
-    ['Duplicado', r.dup, r.total?((r.dup/r.total)*100).toFixed(1).replace('.',',')+'%':'0%']
-  ];
-
-  const det=[
-    ['DETALHAMENTO OPERACIONAL'],
-    ['Base completa das fichas consideradas no relatório.'],
-    [],
-    ['Unidade','Ficha','Data','Tipo','Motorista','CPF','Placa','Resultado','Motivo'],
-    ...filtered.map(x=>[
-      x.unidade||'',
-      x.ficha||'',
-      fmtDate(x.data),
-      x.tipo||'',
-      x.motorista||'',
-      x.cpf||'',
-      x.placa||'',
-      x.classe||'',
-      x.motivo||''
-    ])
-  ];
-
-  const wb=XLSX.utils.book_new();
-  addSheet(wb,'Resumo Executivo',aoaResumo,[28,28,70],{
-    merges:[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}},{s:{r:3,c:0},e:{r:3,c:2}},{s:{r:4,c:0},e:{r:4,c:2}}]
-  });
-  addSheet(wb,'Consolidado Unidades',consolidado,[28,12,14,14,14,14,14],{
-    autofilter:{ref:'A4:G4'}
-  });
-  addSheet(wb,'Resultados',resultados,[24,16,18],{
-    autofilter:{ref:'A4:C4'}
-  });
-  addSheet(wb,'Detalhamento',det,[18,12,12,22,34,18,16,16,42],{
-    autofilter:{ref:'A4:I4'}
-  });
-
-  const nomeUnidade=(getUnidadesSelecionadas().length===1?getUnidadesSelecionadas()[0]:'consolidado').replace(/[^a-zA-Z0-9_-]/g,'_');
-  const nome=`relatorio_gerencial_brasil_web_${nomeUnidade}_${$('dataIni').value}_a_${$('dataFim').value}.xlsx`;
-  XLSX.writeFile(wb,nome);
-}
-function carregarDados(){ Papa.parse(CSV_URL+'&t='+Date.now(),{download:true,header:true,skipEmptyLines:true,complete:function(res){ raw=normalizeRows(res.data); populateFilters(); applyFilters(); $('status').classList.remove('error'); $('status').textContent=`Dados carregados com sucesso: ${raw.length} fichas encontradas.`; $('lastUpdate').textContent='Última atualização: '+new Date().toLocaleString('pt-BR'); }, error:function(err){ $('status').classList.add('error'); $('status').innerHTML='Não consegui carregar a planilha automaticamente. Verifique se ela está publicada na web em CSV e se o navegador permite acesso à internet.<br><br>Erro: '+err; }}); }
-['dataIni','dataFim','fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
-$('btnMultiUnidade').addEventListener('click',()=> $('panelUnidade').classList.toggle('open'));
-document.addEventListener('click',e=>{ if(!$('panelUnidade').contains(e.target) && !$('btnMultiUnidade').contains(e.target)) $('panelUnidade').classList.remove('open'); });
-$('selTodas').addEventListener('click',()=>{ document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=true); atualizaTextoUnidades(); applyFilters(); });
-$('limparTodas').addEventListener('click',()=>{ document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=false); atualizaTextoUnidades(); applyFilters(); });
+function gerarRelatorioGerencial(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length, taxa=total?((ap/total)*100).toFixed(1).replace('.',',')+'%':'0%'; const unidades=selectedUnits(); const unidadeTxt=unidades.length?unidades.join(', '):'Todas'; const periodo=`${$('dataIni').value||'início'} até ${$('dataFim').value||'fim'}`; const linhas=[]; const add=(arr)=>linhas.push(arr.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(';'));
+  add(['BRASIL WEB']); add(['A BRASIL NÃO PARA']); add(['RELATÓRIO GERENCIAL DE PESQUISAS']); add([]); add(['Período',periodo]); add(['Unidades',unidadeTxt]); add(['Emitido em',new Date().toLocaleString('pt-BR')]); add([]); add(['RESUMO EXECUTIVO']); add(['Indicador','Valor']); add(['Total de pesquisas',total]); add(['Aprovadas',ap]); add(['Taxa de aprovação',taxa]); add(['Reprovadas',rp]); add(['Inválidas',inv]); add(['Duplicadas',dup]); add([]); add(['DESEMPENHO DAS UNIDADES']); add(['Unidade','Total','Aprovadas','% Aprovação','Reprovadas','Inválidas','Duplicadas']);
+  const map={}; filtered.forEach(r=>{const u=r.unidade||'Não informado'; if(!map[u])map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++;}); Object.entries(map).sort((a,b)=>b[1].t-a[1].t).forEach(([u,v])=>add([u,v.t,v.a,v.t?((v.a/v.t)*100).toFixed(1).replace('.',',')+'%':'0%',v.r,v.i,v.d]));
+  add([]); add(['DETALHAMENTO']); add(['Unidade','Ficha','Data','Tipo','Motorista','CPF','Placa','Resultado','Motivo']); filtered.forEach(r=>add([r.unidade,r.ficha,fmtDate(r.data),r.tipo,r.motorista,r.cpf,r.placa,r.classe,r.motivo])); const csv='\uFEFF'+linhas.join('\n'); const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}); const link=document.createElement('a'); link.href=URL.createObjectURL(blob); link.download=`relatorio_gerencial_brasil_web_${$('dataIni').value||'inicio'}_a_${$('dataFim').value||'fim'}.csv`; link.click(); }
+['dataIni','dataFim'].forEach(id=>$(id).addEventListener('change',()=>{usuarioAlterouData=true;applyFilters();}));
+['fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
+$('unitToggle').onclick=()=> $('unitPanel').classList.toggle('open');
+$('marcarTodas').onclick=()=>{document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=true);updateUnitText();applyFilters();};
+$('limparUnidades').onclick=()=>{document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=false);updateUnitText();applyFilters();};
+document.addEventListener('click',e=>{ if(!$('unitFilterBox').contains(e.target)) $('unitPanel').classList.remove('open'); });
 $('btnRelatorio').addEventListener('click',gerarRelatorioGerencial);
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('exec').classList.toggle('hidden',b.dataset.tab!=='exec'); $('det').classList.toggle('hidden',b.dataset.tab!=='det'); });
-carregarDados();
-setInterval(carregarDados, 300000);
+function carregarDados(){ Papa.parse(CSV_URL+'&t='+Date.now(),{download:true,header:true,skipEmptyLines:true,complete:function(res){ raw=normalizeRows(res.data); populateFilters(); applyFilters(); $('status').classList.remove('error'); $('status').textContent=`Dados carregados com sucesso: ${raw.length} fichas encontradas.`; $('lastUpdate').textContent='Última atualização: '+new Date().toLocaleString('pt-BR');},error:function(err){ $('status').classList.add('error'); $('status').innerHTML='Não consegui carregar a planilha automaticamente. Verifique se ela está publicada na web em CSV e se o navegador permite acesso à internet.<br><br>Erro: '+err; }}); }
+carregarDados(); setInterval(carregarDados,300000);
 </script>
 </body>
 </html>
