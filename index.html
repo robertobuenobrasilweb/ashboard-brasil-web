@@ -51,7 +51,6 @@
 
   <div class="actions">
     <button id="btnRelatorio" class="btn btnExcel">📄 Gerar Relatório Gerencial</button>
-    <button id="btnAtualizar" class="btn btnRefresh">🔄 Atualizar agora</button>
     <span class="actionHint">O relatório respeita os filtros de período, unidades, resultado, tipo e pesquisa.</span>
   </div>
 
@@ -97,10 +96,18 @@ function uniq(arr){ return [...new Set(arr.filter(Boolean))].sort((a,b)=>a.local
 function getUnidadesSelecionadas(){ return [...document.querySelectorAll('.chkUnidade:checked')].map(c=>c.value); }
 function atualizaTextoUnidades(){ const todas=uniq(raw.map(r=>r.unidade)); const sel=getUnidadesSelecionadas(); $('txtUnidades').textContent = (!sel.length || sel.length===todas.length) ? 'Todas' : (sel.length===1 ? sel[0] : `${sel.length} unidades selecionadas`); }
 function criarFiltroUnidades(){ const lista=$('listaUnidades'); lista.innerHTML=''; const unidades=uniq(raw.map(r=>r.unidade)); unidades.forEach(v=>{ const label=document.createElement('label'); label.className='chkRow'; label.innerHTML=`<input type="checkbox" class="chkUnidade" value="${v}" checked> ${v}`; lista.appendChild(label); }); document.querySelectorAll('.chkUnidade').forEach(chk=>chk.addEventListener('change',()=>{ atualizaTextoUnidades(); applyFilters(); })); atualizaTextoUnidades(); }
+function getDataUltimaAtualizacao(){
+  const datas=raw.map(r=>r.data).filter(Boolean).sort((a,b)=>b-a);
+  return datas[0] || new Date();
+}
 function populateFilters(){
   [['fResultado','classe'],['fTipo','tipo']].forEach(([id,key])=>{ const sel=$(id); const atual=sel.value; sel.innerHTML='<option value="">Todos</option>'; uniq(raw.map(r=>r[key])).forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o);}); if([...sel.options].some(o=>o.value===atual)) sel.value=atual; });
   criarFiltroUnidades();
-  if(primeiraCarga){ const hoje=new Date(); const primeiroDia=new Date(hoje.getFullYear(), hoje.getMonth(), 1); $('dataIni').value=isoLocal(primeiroDia); $('dataFim').value=isoLocal(hoje); primeiraCarga=false; }
+  if(primeiraCarga){
+    $('dataIni').value='2026-01-01';
+    $('dataFim').value=isoLocal(getDataUltimaAtualizacao());
+    primeiraCarga=false;
+  }
 }
 function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null, df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; const unidades=getUnidadesSelecionadas(); const totalUnidades=uniq(raw.map(r=>r.unidade)).length; const res=$('fResultado').value, t=$('fTipo').value, busca=norm($('fBusca').value); filtered=raw.filter(r=>{ if(di&&r.data&&r.data<di)return false; if(df&&r.data&&r.data>df)return false; if(unidades.length && unidades.length!==totalUnidades && !unidades.includes(r.unidade))return false; if(!unidades.length)return false; if(res&&r.classe!==res)return false; if(t&&r.tipo!==t)return false; if(busca&&!norm([r.ficha,r.motorista,r.cpf,r.placa,r.motivo].join(' ')).includes(busca))return false; return true; }); renderAll(); }
 function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
@@ -125,7 +132,34 @@ function periodoDias(){ const di=$('dataIni').value?new Date($('dataIni').value+
 function chaveEvolucao(r, modo){ if(!r.data) return 'Sem data'; if(modo==='DIA') return String(r.data.getDate()).padStart(2,'0')+'/'+String(r.data.getMonth()+1).padStart(2,'0'); if(modo==='MES') return r.data.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}).replace('.','').toUpperCase(); return String(r.data.getFullYear()); }
 function ordemEvolucao(label, modo){ if(label==='Sem data') return 99999999; if(modo==='DIA'){ const [d,m]=label.split('/').map(Number); const ano=$('dataIni').value?Number($('dataIni').value.slice(0,4)):new Date().getFullYear(); return new Date(ano,m-1,d).getTime(); } if(modo==='MES'){ const meses=['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ']; const p=label.split(' '); return (2000+Number(p[1]))*12 + meses.indexOf(p[0].slice(0,3)); } return Number(label); }
 function renderKPIs(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; $('kTotal').textContent=total; $('kAprov').textContent=ap; $('kRep').textContent=rp; $('kInv').textContent=inv; $('kDup').textContent=dup; $('kTaxa').textContent= total? ((ap/total)*100).toFixed(1).replace('.',',')+'%' : '0%'; }
-function renderCharts(){ const dias=periodoDias(); const modo=dias<=31?'DIA':(dias<=365?'MES':'ANO'); $('tituloEvolucao').textContent= modo==='DIA'?'Evolução diária das fichas':(modo==='MES'?'Evolução mensal das fichas':'Evolução anual das fichas'); $('modoEvolucao').textContent='Visualização: '+(modo==='DIA'?'Diária':modo==='MES'?'Mensal':'Anual'); const byEvo=countBy(filtered,r=>chaveEvolucao(r,modo)); const evoLabels=Object.keys(byEvo).sort((a,b)=>ordemEvolucao(a,modo)-ordemEvolucao(b,modo)); chart('cEvolucao','line',evoLabels,evoLabels.map(k=>byEvo[k]),{scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:modo==='DIA'?16:14}}}}); const res=countBy(filtered,'classe'); chart('cResultado','doughnut',Object.keys(res),Object.values(res)); const un=countBy(filtered,'unidade'); const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]); chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}}); const tp=countBy(filtered,'tipo'); chart('cTipo','pie',Object.keys(tp),Object.values(tp)); const mot=countBy(filtered.filter(r=>r.motivo),'motivo'); const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]); chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}}); }
+function renderCharts(){
+  const fimFiltro=$('dataFim').value?new Date($('dataFim').value+'T00:00'):getDataUltimaAtualizacao();
+  const inicioMes=new Date(fimFiltro.getFullYear(), fimFiltro.getMonth(), 1);
+  const fimMes=fimFiltro;
+  const mesLabel=fimFiltro.toLocaleDateString('pt-BR',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
+
+  $('tituloEvolucao').textContent='Evolução diária das fichas - mês corrente';
+  $('modoEvolucao').textContent='Visualização: '+mesLabel;
+
+  const evoBase=filtered.filter(r=>r.data && r.data>=inicioMes && r.data<=fimMes);
+  const byEvo=countBy(evoBase,r=>chaveEvolucao(r,'DIA'));
+  const evoLabels=[];
+  for(let d=new Date(inicioMes); d<=fimMes; d.setDate(d.getDate()+1)){
+    evoLabels.push(String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'));
+  }
+  chart('cEvolucao','line',evoLabels,evoLabels.map(k=>byEvo[k]||0),{scales:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:16}}}});
+
+  const res=countBy(filtered,'classe');
+  chart('cResultado','doughnut',Object.keys(res),Object.values(res));
+  const un=countBy(filtered,'unidade');
+  const unLabels=Object.entries(un).sort((a,b)=>b[1]-a[1]).slice(0,12).map(x=>x[0]);
+  chart('cUnidade','bar',unLabels,unLabels.map(k=>un[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}});
+  const tp=countBy(filtered,'tipo');
+  chart('cTipo','pie',Object.keys(tp),Object.values(tp));
+  const mot=countBy(filtered.filter(r=>r.motivo),'motivo');
+  const motLabels=Object.entries(mot).sort((a,b)=>b[1]-a[1]).slice(0,10).map(x=>x[0]);
+  chart('cMotivo','bar',motLabels,motLabels.map(k=>mot[k]),{indexAxis:'y',scales:{x:{beginAtZero:true,ticks:{precision:0}},y:{ticks:{autoSkip:false}}}});
+}
 function badge(c){ const cls=c==='APROVADO'?'ok':c==='REPROVADO'?'rep':c==='INVÁLIDO'?'inv':c==='DUPLICADO'?'dup':'other'; return `<span class="badge ${cls}">${c}</span>`; }
 function getResumo(){ const total=filtered.length, ap=filtered.filter(r=>r.classe==='APROVADO').length, rp=filtered.filter(r=>r.classe==='REPROVADO').length, inv=filtered.filter(r=>r.classe==='INVÁLIDO').length, dup=filtered.filter(r=>r.classe==='DUPLICADO').length; return {total,ap,rp,inv,dup,taxa:total?((ap/total)*100):0}; }
 function getRanking(){ const map={}; filtered.forEach(r=>{ const u=r.unidade||'Não informado'; if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0}; map[u].t++; if(r.classe==='APROVADO')map[u].a++; if(r.classe==='REPROVADO')map[u].r++; if(r.classe==='INVÁLIDO')map[u].i++; if(r.classe==='DUPLICADO')map[u].d++; }); return Object.entries(map).sort((a,b)=>b[1].t-a[1].t).map(([u,v])=>({unidade:u,total:v.t,aprovadas:v.a,taxa:v.t?((v.a/v.t)*100):0,reprovadas:v.r,invalidas:v.i,duplicadas:v.d})); }
@@ -283,7 +317,6 @@ document.addEventListener('click',e=>{ if(!$('panelUnidade').contains(e.target) 
 $('selTodas').addEventListener('click',()=>{ document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=true); atualizaTextoUnidades(); applyFilters(); });
 $('limparTodas').addEventListener('click',()=>{ document.querySelectorAll('.chkUnidade').forEach(c=>c.checked=false); atualizaTextoUnidades(); applyFilters(); });
 $('btnRelatorio').addEventListener('click',gerarRelatorioGerencial);
-$('btnAtualizar').addEventListener('click',carregarDados);
 document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); $('exec').classList.toggle('hidden',b.dataset.tab!=='exec'); $('det').classList.toggle('hidden',b.dataset.tab!=='det'); });
 carregarDados();
 setInterval(carregarDados, 300000);
