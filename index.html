@@ -106,18 +106,20 @@ function applyFilters(){ const di=$('dataIni').value?new Date($('dataIni').value
 function countBy(arr,key){ const o={}; arr.forEach(r=>{ const k=typeof key==='function'?key(r):(r[key]||'Não informado'); o[k]=(o[k]||0)+1;}); return o; }
 function destroy(id){ if(charts[id]) charts[id].destroy(); }
 function chart(id,type,labels,data,opts={}){ destroy(id); const base={responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:type!=='bar'&&type!=='line'},tooltip:{enabled:true,backgroundColor:'#0f172a',titleFont:{weight:'bold'},bodyFont:{weight:'600'},padding:12,callbacks:{label:(ctx)=>`Quantidade: ${ctx.formattedValue}`}},datalabels:{display:ctx=> ctx.dataset.data.length<=18 || type==='doughnut' || type==='pie',anchor:type==='bar'?'end':'end',align:type==='bar'?'right':'top',offset:4,color:'#1f2937',font:{weight:'800',size:11},formatter:v=>v? v : ''}},scales:type==='doughnut'||type==='pie'?{}:{y:{beginAtZero:true,ticks:{precision:0}},x:{ticks:{maxRotation:0,minRotation:0,autoSkip:true,maxTicksLimit:14}}}}; const dataset={label:'Quantidade',data,borderWidth:3,tension:.35,pointRadius:4,pointHoverRadius:7,fill:false};
-  if(id==='cResultado'){
+
+  if(id==="cResultado"){
     dataset.backgroundColor=labels.map(l=>{
-      const x=norm(l);
-      if(x==='APROVADO') return '#16a34a';   // Verde
-      if(x==='REPROVADO') return '#dc2626';  // Vermelho
-      if(x==='INVALIDO') return '#facc15';   // Amarelo
-      if(x==='DUPLICADO') return '#f97316';  // Laranja
-      return '#94a3b8';                      // Cinza
+      const x=(l||"").toUpperCase();
+      if(x==="APROVADO") return "#16a34a";
+      if(x==="REPROVADO") return "#dc2626";
+      if(x==="INVÁLIDO" || x==="INVALIDO") return "#facc15";
+      if(x==="DUPLICADO") return "#f97316";
+      return "#94a3b8";
     });
-    dataset.borderColor='#ffffff';
+    dataset.borderColor="#ffffff";
     dataset.borderWidth=2;
   }
+
   charts[id]=new Chart($(id),{type,data:{labels,datasets:[dataset]},options:{...base,...opts},plugins:[ChartDataLabels]}); }
 function periodoDias(){ const di=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null; const df=$('dataFim').value?new Date($('dataFim').value+'T23:59'):null; if(!di||!df) return 0; return Math.ceil((df-di)/(1000*60*60*24))+1; }
 function chaveEvolucao(r, modo){ if(!r.data) return 'Sem data'; if(modo==='DIA') return String(r.data.getDate()).padStart(2,'0')+'/'+String(r.data.getMonth()+1).padStart(2,'0'); if(modo==='MES') return r.data.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}).replace('.','').toUpperCase(); return String(r.data.getFullYear()); }
@@ -133,11 +135,147 @@ function renderAll(){ renderKPIs(); renderCharts(); renderRank(); renderDetail()
 function periodoTexto(){ const i=$('dataIni').value?new Date($('dataIni').value+'T00:00'):null; const f=$('dataFim').value?new Date($('dataFim').value+'T00:00'):null; return `${fmtDate(i)} até ${fmtDate(f)}`; }
 function unidadesTexto(){ const unidades=getUnidadesSelecionadas(); const todas=uniq(raw.map(r=>r.unidade)); if(!unidades.length) return 'Nenhuma unidade selecionada'; if(unidades.length===todas.length) return 'Todas as unidades'; return unidades.join(', '); }
 function aoa_to_sheet_with_widths(aoa,widths){ const ws=XLSX.utils.aoa_to_sheet(aoa); ws['!cols']=widths.map(w=>({wch:w})); return ws; }
-function gerarRelatorioGerencial(){ if(!window.XLSX){ alert('Biblioteca do Excel ainda não carregou. Tente novamente em alguns segundos.'); return; } const r=getResumo(); const emitido=new Date(); const aoaResumo=[['BRASIL WEB'],['A BRASIL NÃO PARA'],[],['RELATÓRIO GERENCIAL DE PESQUISAS'],[],['Período', periodoTexto()],['Unidades', unidadesTexto()],['Emitido em', fmtDateTime(emitido)],[],['RESUMO EXECUTIVO'],['Indicador','Valor'],['Total de pesquisas', r.total],['Aprovadas', r.ap],['Reprovadas', r.rp],['Inválidas', r.inv],['Duplicadas', r.dup],['Taxa de aprovação', r.taxa.toFixed(1).replace('.',',')+'%'],[],['RESULTADOS'],['Resultado','Quantidade'],['Aprovado', r.ap],['Reprovado', r.rp],['Inválido', r.inv],['Duplicado', r.dup],[],['Relatório gerado automaticamente pelo BW Analytics'],['Brasil Web - A Brasil Não Para']];
-  const ranking=[['Unidade','Total','Aprovadas','% Aprovação','Reprovadas','Inválidas','Duplicadas'],...getRanking().map(x=>[x.unidade,x.total,x.aprovadas,x.taxa.toFixed(1).replace('.',',')+'%',x.reprovadas,x.invalidas,x.duplicadas])];
-  const det=[['Unidade','Ficha','Data','Tipo','Motorista','CPF','Placa','Resultado','Motivo'],...filtered.map(x=>[x.unidade||'',x.ficha||'',fmtDate(x.data),x.tipo||'',x.motorista||'',x.cpf||'',x.placa||'',x.classe||'',x.motivo||''])];
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,aoa_to_sheet_with_widths(aoaResumo,[28,60]),'Resumo Executivo'); XLSX.utils.book_append_sheet(wb,aoa_to_sheet_with_widths(ranking,[22,12,12,14,12,12,12]),'Ranking Unidades'); XLSX.utils.book_append_sheet(wb,aoa_to_sheet_with_widths(det,[14,12,12,20,34,18,14,15,38]),'Detalhamento');
-  const nomeUnidade=(getUnidadesSelecionadas().length===1?getUnidadesSelecionadas()[0]:'unidades').replace(/[^a-zA-Z0-9_-]/g,'_'); const nome=`relatorio_gerencial_brasil_web_${nomeUnidade}_${$('dataIni').value}_a_${$('dataFim').value}.xlsx`; XLSX.writeFile(wb,nome); }
+function getConsolidadoUnidades(){
+  const map={};
+  filtered.forEach(r=>{
+    const u=r.unidade||'Não informado';
+    if(!map[u]) map[u]={t:0,a:0,r:0,i:0,d:0};
+    map[u].t++;
+    if(r.classe==='APROVADO')map[u].a++;
+    if(r.classe==='REPROVADO')map[u].r++;
+    if(r.classe==='INVÁLIDO')map[u].i++;
+    if(r.classe==='DUPLICADO')map[u].d++;
+  });
+  return Object.entries(map)
+    .sort((a,b)=>a[0].localeCompare(b[0],'pt-BR'))
+    .map(([u,v])=>({
+      unidade:u,
+      total:v.t,
+      aprovadas:v.a,
+      taxa:v.t?((v.a/v.t)*100):0,
+      reprovadas:v.r,
+      invalidas:v.i,
+      duplicadas:v.d
+    }));
+}
+function addSheet(wb,nome,aoa,widths,opts={}){
+  const ws=aoa_to_sheet_with_widths(aoa,widths);
+  if(opts.merges) ws['!merges']=opts.merges;
+  if(opts.autofilter) ws['!autofilter']=opts.autofilter;
+  if(opts.freeze) ws['!freeze']=opts.freeze;
+  XLSX.utils.book_append_sheet(wb,ws,nome);
+}
+function gerarRelatorioGerencial(){
+  if(!window.XLSX){
+    alert('Biblioteca do Excel ainda não carregou. Tente novamente em alguns segundos.');
+    return;
+  }
+
+  const r=getResumo();
+  const emitido=new Date();
+  const taxa=r.taxa.toFixed(1).replace('.',',')+'%';
+  const periodo=periodoTexto();
+  const unidades=unidadesTexto();
+
+  const aoaResumo=[
+    ['BRASIL WEB'],
+    ['A BRASIL NÃO PARA'],
+    [],
+    ['RELATÓRIO GERENCIAL DE PESQUISAS'],
+    ['Resumo executivo consolidado'],
+    [],
+    ['Período analisado', periodo],
+    ['Unidades consideradas', unidades],
+    ['Emitido em', fmtDateTime(emitido)],
+    [],
+    ['INDICADORES GERAIS'],
+    ['Indicador','Resultado','Descrição'],
+    ['Total de pesquisas', r.total, 'Quantidade total de fichas consideradas nos filtros aplicados'],
+    ['Aprovadas', r.ap, 'Pesquisas/fichas classificadas como aprovadas'],
+    ['Reprovadas', r.rp, 'Pesquisas/fichas classificadas como reprovadas'],
+    ['Inválidas', r.inv, 'Registros classificados como inválidos'],
+    ['Duplicadas', r.dup, 'Registros identificados como duplicados'],
+    ['Taxa de aprovação', taxa, 'Percentual de aprovadas sobre o total filtrado'],
+    [],
+    ['DISTRIBUIÇÃO POR RESULTADO'],
+    ['Resultado','Quantidade','Participação'],
+    ['Aprovado', r.ap, r.total?((r.ap/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Reprovado', r.rp, r.total?((r.rp/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Inválido', r.inv, r.total?((r.inv/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Duplicado', r.dup, r.total?((r.dup/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    [],
+    ['OBSERVAÇÕES GERENCIAIS'],
+    ['Este relatório apresenta uma visão consolidada dos dados filtrados no dashboard.'],
+    ['A aba por unidade tem finalidade técnica e operacional, sem ranking ou comparação competitiva.'],
+    ['Os dados respeitam exatamente os filtros selecionados no momento da geração do arquivo.'],
+    [],
+    ['Relatório gerado automaticamente pelo Dashboard Brasil Web'],
+    ['Brasil Web - A Brasil Não Para']
+  ];
+
+  const consolidado=[
+    ['CONSOLIDADO POR UNIDADE OPERACIONAL'],
+    ['Visão técnica organizada em ordem alfabética, sem ranking entre unidades.'],
+    [],
+    ['Unidade','Total','Aprovadas','% Aprovação','Reprovadas','Inválidas','Duplicadas'],
+    ...getConsolidadoUnidades().map(x=>[
+      x.unidade,
+      x.total,
+      x.aprovadas,
+      x.taxa.toFixed(1).replace('.',',')+'%',
+      x.reprovadas,
+      x.invalidas,
+      x.duplicadas
+    ])
+  ];
+
+  const resultados=[
+    ['DISTRIBUIÇÃO CONSOLIDADA POR RESULTADO'],
+    ['Resumo técnico dos status encontrados nos filtros aplicados.'],
+    [],
+    ['Resultado','Quantidade','Participação'],
+    ['Aprovado', r.ap, r.total?((r.ap/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Reprovado', r.rp, r.total?((r.rp/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Inválido', r.inv, r.total?((r.inv/r.total)*100).toFixed(1).replace('.',',')+'%':'0%'],
+    ['Duplicado', r.dup, r.total?((r.dup/r.total)*100).toFixed(1).replace('.',',')+'%':'0%']
+  ];
+
+  const det=[
+    ['DETALHAMENTO OPERACIONAL'],
+    ['Base completa das fichas consideradas no relatório.'],
+    [],
+    ['Unidade','Ficha','Data','Tipo','Motorista','CPF','Placa','Resultado','Motivo'],
+    ...filtered.map(x=>[
+      x.unidade||'',
+      x.ficha||'',
+      fmtDate(x.data),
+      x.tipo||'',
+      x.motorista||'',
+      x.cpf||'',
+      x.placa||'',
+      x.classe||'',
+      x.motivo||''
+    ])
+  ];
+
+  const wb=XLSX.utils.book_new();
+  addSheet(wb,'Resumo Executivo',aoaResumo,[28,28,70],{
+    merges:[{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}},{s:{r:3,c:0},e:{r:3,c:2}},{s:{r:4,c:0},e:{r:4,c:2}}]
+  });
+  addSheet(wb,'Consolidado Unidades',consolidado,[28,12,14,14,14,14,14],{
+    autofilter:{ref:'A4:G4'}
+  });
+  addSheet(wb,'Resultados',resultados,[24,16,18],{
+    autofilter:{ref:'A4:C4'}
+  });
+  addSheet(wb,'Detalhamento',det,[18,12,12,22,34,18,16,16,42],{
+    autofilter:{ref:'A4:I4'}
+  });
+
+  const nomeUnidade=(getUnidadesSelecionadas().length===1?getUnidadesSelecionadas()[0]:'consolidado').replace(/[^a-zA-Z0-9_-]/g,'_');
+  const nome=`relatorio_gerencial_brasil_web_${nomeUnidade}_${$('dataIni').value}_a_${$('dataFim').value}.xlsx`;
+  XLSX.writeFile(wb,nome);
+}
 function carregarDados(){ Papa.parse(CSV_URL+'&t='+Date.now(),{download:true,header:true,skipEmptyLines:true,complete:function(res){ raw=normalizeRows(res.data); populateFilters(); applyFilters(); $('status').classList.remove('error'); $('status').textContent=`Dados carregados com sucesso: ${raw.length} fichas encontradas.`; $('lastUpdate').textContent='Última atualização: '+new Date().toLocaleString('pt-BR'); }, error:function(err){ $('status').classList.add('error'); $('status').innerHTML='Não consegui carregar a planilha automaticamente. Verifique se ela está publicada na web em CSV e se o navegador permite acesso à internet.<br><br>Erro: '+err; }}); }
 ['dataIni','dataFim','fResultado','fTipo','fBusca'].forEach(id=>$(id).addEventListener('input',applyFilters));
 $('btnMultiUnidade').addEventListener('click',()=> $('panelUnidade').classList.toggle('open'));
